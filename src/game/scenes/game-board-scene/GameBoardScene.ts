@@ -11,6 +11,7 @@ import {
   TurnManager,
   GameUtils
 } from './components';
+import { BattleSystem } from '@/game/systems/BattleSystem';
 
 export class GameBoardScene extends BaseScene {
   // 游戏数据
@@ -24,6 +25,7 @@ export class GameBoardScene extends BaseScene {
   private cardManager: CardManager;
   private uiManager: UIManager;
   private turnManager: TurnManager;
+  private battleSystem: BattleSystem | null = null;
 
   constructor() {
     super('GameBoardScene');
@@ -140,6 +142,17 @@ export class GameBoardScene extends BaseScene {
       this.uiManager.createInfoPanel(null, this.currentFloor);
     }
     
+    // 初始化战斗系统
+    if (this.player) {
+      this.battleSystem = new BattleSystem(
+        this,
+        this.player,
+        this.enemyManager.getEnemies(),
+        () => { /* 回合结束回调 */ },
+        (victory: boolean) => { /* 战斗结束回调 */ }
+      );
+    }
+    
     // 设置格子点击事件
     this.setupGridClickEvents();
   }
@@ -192,6 +205,15 @@ export class GameBoardScene extends BaseScene {
           });
           
           this.battlefieldManager.showAttackableEnemies(attackablePositions);
+        }
+      } else if (card.type === 'defense' || (card.type === 'skill' && card.effects.some(e => e.type === 'heal' || e.type === 'block'))) {
+        // 对于防御和治疗卡牌，高亮显示玩家自身
+        const playerPos = this.playerManager.getPlayerPosition();
+        if (playerPos) {
+          // 创建一个只包含玩家位置的数组
+          const selfTargetPositions: GridCoord[] = [playerPos];
+          // 使用与攻击目标相同的高亮方式，但只高亮玩家位置
+          this.battlefieldManager.showSelfTargetable(selfTargetPositions);
         }
       }
     }
@@ -266,6 +288,30 @@ export class GameBoardScene extends BaseScene {
               }
             });
           }
+        }
+      }
+      
+      // 检查是否点击了玩家自身（防御或治疗卡牌）
+      if (selectedCard && (selectedCard.type === 'defense' || 
+          (selectedCard.type === 'skill' && selectedCard.effects && 
+           selectedCard.effects.some(e => e.type === 'heal' || e.type === 'block')))) {
+        
+        // 检查点击的是否是玩家位置
+        const isPlayerPosition = playerPos && coord.x === playerPos.x && coord.y === playerPos.y;
+        
+        if (isPlayerPosition && this.player && this.battleSystem) {
+          console.log(`对自身使用卡牌: ${selectedCard.name}`);
+          
+          // 使用战斗系统的useCardOnSelf方法应用卡牌效果
+          this.battleSystem.useCardOnSelf(selectedCard);
+          
+          // 使用卡牌
+          this.cardManager.playCard(selectedCard, this.player);
+          this.uiManager.updateInfoPanel(this.player);
+          
+          // 清除选中状态和有效移动标记
+          this.cardManager.clearCardSelection();
+          this.battlefieldManager.clearValidMoves();
         }
       }
     }

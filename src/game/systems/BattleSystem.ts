@@ -350,6 +350,10 @@ export class BattleSystem {
           entity.health = Math.max(0, entity.health - poisonDamage);
           console.log(`${entity.name} 受到 ${poisonDamage} 点中毒伤害，剩余生命值: ${entity.health}`);
           break;
+        case 'block':
+          // 防御效果在这里不需要特殊处理，只需要保留到下一回合
+          console.log(`${entity.name} 有 ${effect.value} 点护盾`);
+          break;
         // 可以添加更多效果类型的处理
       }
       
@@ -371,6 +375,7 @@ export class BattleSystem {
       case 'vulnerable': return '易伤';
       case 'poison': return '中毒';
       case 'boost_element': return '元素增强';
+      case 'block': return '护盾';
       default: return effectType;
     }
   }
@@ -384,6 +389,7 @@ export class BattleSystem {
       case 'vulnerable': return '增加受到的伤害';
       case 'poison': return '每回合受到伤害';
       case 'boost_element': return '增强特定元素的效果';
+      case 'block': return '减少受到的伤害';
       default: return '状态效果';
     }
   }
@@ -422,17 +428,65 @@ export class BattleSystem {
     return true;
   }
 
+  // 对自己使用卡牌（治疗或防御）
+  useCardOnSelf(card: Card): boolean {
+    // 检查是否是玩家回合
+    if (this.currentTurn !== 'player') {
+      console.log('不是玩家回合，无法使用卡牌');
+      return false;
+    }
+    
+    // 检查能量是否足够
+    if (this.player.energy < card.cost) {
+      console.log('能量不足，无法使用卡牌');
+      return false;
+    }
+    
+    console.log(`对自己使用卡牌: ${card.name}`);
+    
+    // 消耗能量
+    this.player.energy -= card.cost;
+    
+    // 从手牌中移除
+    const cardIndex = this.player.hand.findIndex(c => c.id === card.id);
+    if (cardIndex !== -1) {
+      this.player.hand.splice(cardIndex, 1);
+    }
+    
+    // 根据卡牌的正逆位状态应用不同效果
+    const isUpright = card.position === CardPosition.UPRIGHT;
+    
+    // 获取对应的效果
+    const effects = isUpright ? card.uprightEffect : card.reversedEffect;
+    console.log(`应用${isUpright ? '正位' : '逆位'}效果`);
+    
+    // 应用卡牌效果
+    for (const effect of effects) {
+      if (effect.type === 'heal') {
+        this.applyHealEffect(effect);
+      } else if (effect.type === 'block') {
+        this.applyBlockEffect(effect);
+      }
+      // 其他可能的自我效果
+    }
+    
+    // 将卡牌放入弃牌堆
+    this.player.discard.push(card);
+    
+    return true;
+  }
+
   // 应用卡牌效果
   private applyCardEffects(card: Card, target?: Enemy): void {
     // 根据卡牌的正逆位状态应用不同效果
     const isUpright = card.position === CardPosition.UPRIGHT;
     
-    // 获取对应的效果描述
-    const effectDescription = isUpright ? card.uprightEffect : card.reversedEffect;
-    console.log(`应用${isUpright ? '正位' : '逆位'}效果: ${effectDescription}`);
+    // 获取对应的效果
+    const effects = isUpright ? card.uprightEffect : card.reversedEffect;
+    console.log(`应用${isUpright ? '正位' : '逆位'}效果`);
     
     // 应用卡牌效果
-    for (const effect of card.effects) {
+    for (const effect of effects) {
       switch (effect.type) {
         case 'damage':
           this.applyDamageEffect(effect, target, card);
@@ -440,13 +494,119 @@ export class BattleSystem {
         case 'heal':
           this.applyHealEffect(effect);
           break;
+        case 'block':
+          this.applyBlockEffect(effect);
+          break;
         case 'draw':
           this.applyDrawEffect(effect);
           break;
         case 'energy':
           this.applyEnergyEffect(effect);
           break;
+        case 'aoe_damage':
+          this.applyAoeDamageEffect(effect, target, card);
+          break;
         // 可以添加更多效果类型的处理
+      }
+    }
+  }
+
+  // 应用治疗效果
+  private applyHealEffect(effect: any): void {
+    const healAmount = effect.value;
+    
+    if (effect.target === 'self' || effect.target === 'single_ally') {
+      this.player.health = Math.min(this.player.maxHealth, this.player.health + healAmount);
+      console.log(`玩家恢复了 ${healAmount} 点生命值，当前生命值: ${this.player.health}`);
+    } else if (effect.target === 'all_allies') {
+      // 如果有队友系统，可以在这里添加对所有队友的治疗
+      this.player.health = Math.min(this.player.maxHealth, this.player.health + healAmount);
+      console.log(`所有友方单位恢复了 ${healAmount} 点生命值`);
+    }
+  }
+
+  // 应用防御效果
+  private applyBlockEffect(effect: any): void {
+    const blockAmount = effect.value;
+    
+    if (effect.target === 'self') {
+      // 添加防御效果到玩家
+      this.player.effects.push({
+        id: `block_${Date.now()}`,
+        name: '护盾',
+        description: '减少受到的伤害',
+        imageUrl: 'assets/images/effects/block.png',
+        type: 'block',
+        value: blockAmount,
+        duration: 1 // 防御效果通常持续到下一回合
+      });
+      console.log(`玩家获得了 ${blockAmount} 点护盾`);
+    } else if (effect.target === 'single_ally') {
+      // 如果有队友系统，可以在这里添加对特定队友的防御
+      this.player.effects.push({
+        id: `block_${Date.now()}`,
+        name: '护盾',
+        description: '减少受到的伤害',
+        imageUrl: 'assets/images/effects/block.png',
+        type: 'block',
+        value: blockAmount,
+        duration: 1
+      });
+      console.log(`目标友方单位获得了 ${blockAmount} 点护盾`);
+    }
+  }
+
+  // 应用抽牌效果
+  private applyDrawEffect(effect: any): void {
+    const drawCount = effect.value;
+    for (let i = 0; i < drawCount; i++) {
+      this.drawCard();
+    }
+  }
+
+  // 应用能量效果
+  private applyEnergyEffect(effect: any): void {
+    const energyAmount = effect.value;
+    this.player.energy += energyAmount;
+    console.log(`玩家获得了 ${energyAmount} 点能量，当前能量: ${this.player.energy}`);
+  }
+
+  // 应用范围伤害效果
+  private applyAoeDamageEffect(effect: any, target?: Enemy, card?: Card): void {
+    if (!target && effect.target !== 'all') {
+      console.log('需要选择目标敌人');
+      return;
+    }
+    
+    let damage = effect.value;
+    
+    // 应用元素加成
+    if (card && this.player.effects.some(e => e.type === 'boost_element' && e.target === card.element)) {
+      const boost = this.player.effects.find(e => e.type === 'boost_element' && e.target === card.element);
+      if (boost) {
+        damage = Math.floor(damage * (1 + boost.value));
+        console.log(`元素加成: 伤害提升至 ${damage}`);
+      }
+    }
+    
+    if (effect.target === 'all') {
+      // 对所有敌人造成伤害
+      for (const enemy of this.enemies) {
+        if (enemy.health > 0) {
+          enemy.health = Math.max(0, enemy.health - damage);
+          console.log(`对 ${enemy.name} 造成 ${damage} 点伤害，剩余生命值: ${enemy.health}`);
+        }
+      }
+    } else if (effect.target === 'adjacent' && target) {
+      // 对目标周围敌人造成伤害
+      for (const enemy of this.enemies) {
+        if (enemy.health > 0 && enemy.id !== target.id) {
+          const distance = gridDistance(enemy.position, target.position);
+          if (distance <= 1) { // 相邻距离为1
+            enemy.health = Math.max(0, enemy.health - damage);
+            console.log(`对相邻敌人 ${enemy.name} 造成 ${damage} 点伤害，剩余生命值: ${enemy.health}`);
+          }
+        }
       }
     }
   }
@@ -470,15 +630,51 @@ export class BattleSystem {
     }
     
     if (effect.target === 'single' && target) {
+      // 检查目标是否有防御效果
+      const blockEffect = target.effects.find(e => e.type === 'block');
+      if (blockEffect) {
+        if (blockEffect.value >= damage) {
+          // 防御完全抵消伤害
+          blockEffect.value -= damage;
+          console.log(`${target.name} 的护盾抵消了 ${damage} 点伤害，剩余护盾: ${blockEffect.value}`);
+          damage = 0;
+        } else {
+          // 防御部分抵消伤害
+          damage -= blockEffect.value;
+          console.log(`${target.name} 的护盾抵消了 ${blockEffect.value} 点伤害，剩余伤害: ${damage}`);
+          blockEffect.value = 0;
+        }
+      }
+      
       // 对单个目标造成伤害
-      target.health = Math.max(0, target.health - damage);
-      console.log(`对 ${target.name} 造成 ${damage} 点伤害，剩余生命值: ${target.health}`);
+      if (damage > 0) {
+        target.health = Math.max(0, target.health - damage);
+        console.log(`对 ${target.name} 造成 ${damage} 点伤害，剩余生命值: ${target.health}`);
+      }
     } else if (effect.target === 'all') {
       // 对所有敌人造成伤害
       for (const enemy of this.enemies) {
         if (enemy.health > 0) {
-          enemy.health = Math.max(0, enemy.health - damage);
-          console.log(`对 ${enemy.name} 造成 ${damage} 点伤害，剩余生命值: ${enemy.health}`);
+          let enemyDamage = damage;
+          
+          // 检查敌人是否有防御效果
+          const blockEffect = enemy.effects.find(e => e.type === 'block');
+          if (blockEffect) {
+            if (blockEffect.value >= enemyDamage) {
+              blockEffect.value -= enemyDamage;
+              console.log(`${enemy.name} 的护盾抵消了 ${enemyDamage} 点伤害，剩余护盾: ${blockEffect.value}`);
+              enemyDamage = 0;
+            } else {
+              enemyDamage -= blockEffect.value;
+              console.log(`${enemy.name} 的护盾抵消了 ${blockEffect.value} 点伤害，剩余伤害: ${enemyDamage}`);
+              blockEffect.value = 0;
+            }
+          }
+          
+          if (enemyDamage > 0) {
+            enemy.health = Math.max(0, enemy.health - enemyDamage);
+            console.log(`对 ${enemy.name} 造成 ${enemyDamage} 点伤害，剩余生命值: ${enemy.health}`);
+          }
         }
       }
     } else if (effect.target === 'area' && target) {
@@ -487,35 +683,30 @@ export class BattleSystem {
         if (enemy.health > 0) {
           const distance = gridDistance(enemy.position, target.position);
           if (distance <= (effect.radius || 1)) {
-            const areaDamage = distance === 0 ? damage : Math.floor(damage / 2);
-            enemy.health = Math.max(0, enemy.health - areaDamage);
-            console.log(`对 ${enemy.name} 造成 ${areaDamage} 点伤害，剩余生命值: ${enemy.health}`);
+            let enemyDamage = distance === 0 ? damage : Math.floor(damage / 2);
+            
+            // 检查敌人是否有防御效果
+            const blockEffect = enemy.effects.find(e => e.type === 'block');
+            if (blockEffect) {
+              if (blockEffect.value >= enemyDamage) {
+                blockEffect.value -= enemyDamage;
+                console.log(`${enemy.name} 的护盾抵消了 ${enemyDamage} 点伤害，剩余护盾: ${blockEffect.value}`);
+                enemyDamage = 0;
+              } else {
+                enemyDamage -= blockEffect.value;
+                console.log(`${enemy.name} 的护盾抵消了 ${blockEffect.value} 点伤害，剩余伤害: ${enemyDamage}`);
+                blockEffect.value = 0;
+              }
+            }
+            
+            if (enemyDamage > 0) {
+              enemy.health = Math.max(0, enemy.health - enemyDamage);
+              console.log(`对 ${enemy.name} 造成 ${enemyDamage} 点伤害，剩余生命值: ${enemy.health}`);
+            }
           }
         }
       }
     }
-  }
-
-  // 应用治疗效果
-  private applyHealEffect(effect: any): void {
-    const healAmount = effect.value;
-    this.player.health = Math.min(this.player.maxHealth, this.player.health + healAmount);
-    console.log(`玩家恢复了 ${healAmount} 点生命值，当前生命值: ${this.player.health}`);
-  }
-
-  // 应用抽牌效果
-  private applyDrawEffect(effect: any): void {
-    const drawCount = effect.value;
-    for (let i = 0; i < drawCount; i++) {
-      this.drawCard();
-    }
-  }
-
-  // 应用能量效果
-  private applyEnergyEffect(effect: any): void {
-    const energyAmount = effect.value;
-    this.player.energy += energyAmount;
-    console.log(`玩家获得了 ${energyAmount} 点能量，当前能量: ${this.player.energy}`);
   }
 
   // 结束战斗

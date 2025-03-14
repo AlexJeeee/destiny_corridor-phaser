@@ -144,6 +144,22 @@ export class BattlefieldManager {
     });
   }
 
+  showSelfTargetable(positions: GridCoord[]): void {
+    // 显示可以被自身卡牌效果（如防御、治疗）影响的位置
+    positions.forEach(pos => {
+      const gridCell = this.findGridCellByCoord(pos);
+      if (gridCell) {
+        const gridTile = gridCell.container.getAt(0);
+        // 检查是否为多边形对象
+        if (gridTile instanceof Phaser.GameObjects.Rectangle) {
+          ((gridTile as any) as { setTint: (tint: number) => void }).setTint(0x00ffff); // 使用青色表示自身可选择
+        } else if (gridTile instanceof Phaser.GameObjects.Image) {
+          gridTile.setTint(0x00ffff); // 使用青色表示自身可选择
+        }
+      }
+    });
+  }
+
   clearValidMoves(): void {
     // 清除所有高亮显示
     this.validMoves.forEach(pos => {
