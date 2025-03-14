@@ -15,7 +15,7 @@
     },
     "allowSyntheticDefaultImports": true,
     "resolveJsonModule": true,
-    "suppressImplicitAnyIndexErrors": true
+    "allowImportingTsExtensions": true
   },
   "include": ["typings.d.ts", "src/**/*", "vite.config.ts"],
   "exclude": [

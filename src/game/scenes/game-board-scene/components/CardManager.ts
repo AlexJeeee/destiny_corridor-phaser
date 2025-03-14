@@ -61,12 +61,12 @@ export class CardManager {
           .setStrokeStyle(2, 0xffffff);
           
         // 为矩形添加自定义的 setTint 和 clearTint 方法
-        cardBackground.setTint = function(tint) {
+        (cardBackground as any).setTint = function(tint) {
           this.setFillStyle(tint);
           return this;
         };
         
-        cardBackground.clearTint = function() {
+        (cardBackground as any).clearTint = function() {
           this.setFillStyle(0x333333); // 恢复默认颜色
           return this;
         };
@@ -171,7 +171,7 @@ export class CardManager {
         .on('pointerout', () => {
           if (!this.selectedCard || this.selectedCard.id !== card.id) {
             if (cardBackground instanceof Phaser.GameObjects.Rectangle) {
-              (cardBackground as Phaser.GameObjects.Rectangle).setFillStyle(0x4a3b96);
+              (cardBackground as Phaser.GameObjects.Rectangle).setFillStyle(0x333333);
             } else if (cardBackground instanceof Phaser.GameObjects.Image) {
               cardBackground.clearTint();
             }
