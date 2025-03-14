@@ -114,8 +114,8 @@ export class CardManager {
       const ySpacing = 16; // Y轴间距
       
       // 添加攻击数值
-      if (card.baseDamage || (card.type === 'attack' && card.value)) {
-        const damage = card.baseDamage || card.value || 0;
+      if (card.baseDamage || card.type === 'attack') {
+        const damage = card.baseDamage || 0;
         const attackText = this.scene.add.text(0, yOffset, `攻击: ${damage}`, {
           fontFamily: 'Arial',
           fontSize: '10px',
@@ -126,8 +126,8 @@ export class CardManager {
       }
       
       // 添加防御数值
-      if (card.baseDefense || (card.type === 'defense' && card.value)) {
-        const defense = card.baseDefense || card.value || 0;
+      if (card.baseDefense || card.type === 'defense') {
+        const defense = card.baseDefense || 0;
         const defenseText = this.scene.add.text(0, yOffset, `防御: ${defense}`, {
           fontFamily: 'Arial',
           fontSize: '10px',

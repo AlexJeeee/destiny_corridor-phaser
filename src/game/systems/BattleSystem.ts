@@ -1,6 +1,6 @@
 import Phaser from 'phaser';
-import { Character, Enemy, Card, GridCoord, CardPosition } from '../../types';
-import { gridDistance } from '../../utils/battlefieldUtils';
+import { Character, Enemy, Card, GridCoord, CardPosition } from '@/types';
+import { gridDistance } from '@/utils/battlefieldUtils';
 
 // 战斗系统类
 export class BattleSystem {

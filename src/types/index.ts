@@ -59,12 +59,13 @@ export interface Card {
   rarity: number; // 1-5，表示稀有度
   baseDamage?: number;
   baseDefense?: number;
-  value?: number; // 添加 value 属性
   effects: CardEffect[];
+  uprightEffect: CardEffect[];
+  reversedEffect: CardEffect[];
   imageUrl: string;
   // 正位和逆位效果
-  uprightEffect: string;
-  reversedEffect: string;
+  uprightEffectDesc: string;
+  reversedEffectDesc: string;
   isUnlocked?: boolean; // 添加isUnlocked属性，表示卡牌是否已解锁
   flipped?: boolean; // 添加flipped属性，表示卡牌是否被翻转
 }
