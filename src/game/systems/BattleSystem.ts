@@ -1,6 +1,6 @@
 import Phaser from 'phaser';
-import { Character, Enemy, Card, HexCoord, CardPosition } from '../../types';
-import { hexDistance } from '../../utils/battlefieldUtils';
+import { Character, Enemy, Card, GridCoord, CardPosition } from '../../types';
+import { gridDistance } from '../../utils/battlefieldUtils';
 
 // 战斗系统类
 export class BattleSystem {
@@ -485,7 +485,7 @@ export class BattleSystem {
       // 对目标及其周围敌人造成伤害
       for (const enemy of this.enemies) {
         if (enemy.health > 0) {
-          const distance = hexDistance(enemy.position, target.position);
+          const distance = gridDistance(enemy.position, target.position);
           if (distance <= (effect.radius || 1)) {
             const areaDamage = distance === 0 ? damage : Math.floor(damage / 2);
             enemy.health = Math.max(0, enemy.health - areaDamage);

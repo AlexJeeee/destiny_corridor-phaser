@@ -7,9 +7,9 @@ import {
   Battlefield, 
   OracleEvent,
   Card,
-  HexCoord,
+  GridCoord,
   TerrainType,
-  HexTile
+  GridTile
 } from '../types'
 import { generateInitialBattlefield } from '../utils/battlefieldUtils'
 import { initialPlayerCharacter } from '../data/characters'
@@ -31,7 +31,7 @@ interface GameStateStore {
   selectCard: (card: Card | null) => void
   flipCard: (cardId: string) => void
   useDestinyCoin: () => void
-  movePlayer: (targetCoord: HexCoord) => void
+  movePlayer: (targetCoord: GridCoord) => void
 }
 
 // 创建初始游戏状态
@@ -65,7 +65,7 @@ export const useGameStore = create<GameStateStore>((set, get) => ({
     const initialState = createInitialGameState();
     
     // 确保玩家角色被正确初始化，并设置位置在战场中心
-    const centerCoord = { q: 0, r: 0, s: 0 }; // 使用固定的中心坐标
+    const centerCoord = { x: 0, y: 0 }; // 使用固定的中心坐标
     
     // 创建玩家角色
     const player = { 
@@ -239,7 +239,7 @@ export const useGameStore = create<GameStateStore>((set, get) => ({
     })
   },
   
-  movePlayer: (targetCoord: HexCoord) => {
+  movePlayer: (targetCoord: GridCoord) => {
     set((state) => {
       const { gameState } = state
       const { player, battlefield } = gameState

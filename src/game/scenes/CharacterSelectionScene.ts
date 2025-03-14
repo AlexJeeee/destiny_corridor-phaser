@@ -85,19 +85,24 @@ export class CharacterSelectionScene extends BaseScene {
 
     // 创建角色精灵
     this.characters.forEach((character, index) => {
-      const sprite = this.add.sprite(centerX, centerY, `character-${character.id}`);
+      // 计算角色位置 - 将不在当前选择的角色放在屏幕外
+      const xPos = index === this.selectedCharacterIndex ? centerX : centerX + this.cameras.main.width * 2;
+      
+      const sprite = this.add.sprite(xPos, centerY, `character-${character.id}`);
       
       // 如果没有加载到角色图片，则使用文本替代
       if (!this.textures.exists(`character-${character.id}`)) {
-        this.add.text(centerX, centerY, character.name.charAt(0), {
+        const textPlaceholder = this.add.text(xPos, centerY, character.name.charAt(0), {
           fontFamily: 'Arial',
           fontSize: '64px',
           color: '#ffffff',
         }).setOrigin(0.5);
+        
+        // 将文本占位符也添加到精灵数组中
+        this.characterSprites.push(textPlaceholder as unknown as Phaser.GameObjects.Sprite);
+      } else {
+        this.characterSprites.push(sprite);
       }
-      
-      sprite.setVisible(index === this.selectedCharacterIndex);
-      this.characterSprites.push(sprite);
     });
 
     // 创建左右箭头
@@ -196,16 +201,54 @@ export class CharacterSelectionScene extends BaseScene {
   }
 
   private selectPreviousCharacter(): void {
-    this.characterSprites[this.selectedCharacterIndex].setVisible(false);
+    // 将当前角色移出屏幕
+    const currentSprite = this.characterSprites[this.selectedCharacterIndex];
+    this.tweens.add({
+      targets: currentSprite,
+      x: this.cameras.main.width * 2 + this.cameras.main.width / 2,
+      duration: 200,
+      ease: 'Power2'
+    });
+    
+    // 更新选中的角色索引
     this.selectedCharacterIndex = (this.selectedCharacterIndex - 1 + this.characters.length) % this.characters.length;
-    this.characterSprites[this.selectedCharacterIndex].setVisible(true);
+    
+    // 将新选中的角色移入屏幕
+    const newSprite = this.characterSprites[this.selectedCharacterIndex];
+    newSprite.x = -this.cameras.main.width / 2;
+    this.tweens.add({
+      targets: newSprite,
+      x: this.cameras.main.width / 2,
+      duration: 200,
+      ease: 'Power2'
+    });
+    
     this.updateCharacterInfo(this.selectedCharacterIndex);
   }
 
   private selectNextCharacter(): void {
-    this.characterSprites[this.selectedCharacterIndex].setVisible(false);
+    // 将当前角色移出屏幕
+    const currentSprite = this.characterSprites[this.selectedCharacterIndex];
+    this.tweens.add({
+      targets: currentSprite,
+      x: -this.cameras.main.width / 2,
+      duration: 200,
+      ease: 'Power2'
+    });
+    
+    // 更新选中的角色索引
     this.selectedCharacterIndex = (this.selectedCharacterIndex + 1) % this.characters.length;
-    this.characterSprites[this.selectedCharacterIndex].setVisible(true);
+    
+    // 将新选中的角色移入屏幕
+    const newSprite = this.characterSprites[this.selectedCharacterIndex];
+    newSprite.x = this.cameras.main.width * 2 + this.cameras.main.width / 2;
+    this.tweens.add({
+      targets: newSprite,
+      x: this.cameras.main.width / 2,
+      duration: 200,
+      ease: 'Power2'
+    });
+    
     this.updateCharacterInfo(this.selectedCharacterIndex);
   }
 
@@ -213,10 +256,9 @@ export class CharacterSelectionScene extends BaseScene {
     const character = this.characters[index];
     if (this.characterInfo) {
       this.characterInfo.setText([
-        `${character.name} - ${character.title || ''}`,
+        `${character.name}`,
         '',
-        `生命: ${character.maxHp || 0}  攻击: ${character.attack || 0}`,
-        `防御: ${character.defense || 0}  速度: ${character.speed || 0}`,
+        `生命: ${character.health || 0}  能量: ${character.energy || 0}`,
         '',
         character.description || ''
       ]);

@@ -1,62 +1,54 @@
 import { 
   Battlefield, 
-  HexCoord, 
-  HexTile, 
+  GridCoord, 
+  GridTile, 
   TerrainType,
   Character,
   Enemy
 } from '../types'
 
-// 创建六边形坐标
-export const createHexCoord = (q: number, r: number): HexCoord => {
-  const s = -q - r
-  return { q, r, s }
+// 创建网格坐标
+export const createGridCoord = (x: number, y: number): GridCoord => {
+  return { x, y }
 }
 
 // 检查两个坐标是否相等
-export const hexCoordsEqual = (a: HexCoord, b: HexCoord): boolean => {
-  return a.q === b.q && a.r === b.r && a.s === b.s
+export const gridCoordsEqual = (a: GridCoord, b: GridCoord): boolean => {
+  return a.x === b.x && a.y === b.y
 }
 
-// 计算两个六边形之间的距离
-export const hexDistance = (a: HexCoord, b: HexCoord): number => {
-  return Math.max(
-    Math.abs(a.q - b.q),
-    Math.abs(a.r - b.r),
-    Math.abs(a.s - b.s)
-  )
+// 计算两个网格之间的距离（曼哈顿距离）
+export const gridDistance = (a: GridCoord, b: GridCoord): number => {
+  return Math.abs(a.x - b.x) + Math.abs(a.y - b.y)
 }
 
-// 获取六边形的邻居坐标
-export const getHexNeighbors = (coord: HexCoord): HexCoord[] => {
+// 获取网格的邻居坐标（上下左右四个方向）
+export const getGridNeighbors = (coord: GridCoord): GridCoord[] => {
   const directions = [
-    { q: 1, r: 0, s: -1 },  // 右
-    { q: 1, r: -1, s: 0 },  // 右上
-    { q: 0, r: -1, s: 1 },  // 左上
-    { q: -1, r: 0, s: 1 },  // 左
-    { q: -1, r: 1, s: 0 },  // 左下
-    { q: 0, r: 1, s: -1 }   // 右下
+    { x: 0, y: -1 },  // 上
+    { x: 1, y: 0 },   // 右
+    { x: 0, y: 1 },   // 下
+    { x: -1, y: 0 }   // 左
   ]
   
   return directions.map(dir => ({
-    q: coord.q + dir.q,
-    r: coord.r + dir.r,
-    s: coord.s + dir.s
+    x: coord.x + dir.x,
+    y: coord.y + dir.y
   }))
 }
 
 // 为了兼容性，提供 getNeighbors 函数别名
-export const getNeighbors = getHexNeighbors;
+export const getNeighbors = getGridNeighbors;
 
 // 生成初始战场
 export const generateInitialBattlefield = (width: number, height: number): Battlefield => {
-  const tiles: HexTile[][] = []
+  const tiles: GridTile[][] = []
   
-  // 创建基本的六边形网格
-  for (let r = 0; r < height; r++) {
-    const row: HexTile[] = []
-    for (let q = 0; q < width; q++) {
-      const coord = createHexCoord(q - Math.floor(r/2), r)
+  // 创建基本的正方形网格
+  for (let y = 0; y < height; y++) {
+    const row: GridTile[] = []
+    for (let x = 0; x < width; x++) {
+      const coord = createGridCoord(x, y)
       
       // 随机生成地形（简单示例）
       let terrain = TerrainType.NORMAL
@@ -70,25 +62,24 @@ export const generateInitialBattlefield = (width: number, height: number): Battl
         terrain = TerrainType.POISON
       } else if (rand < 0.2) {
         terrain = TerrainType.ENERGY
-      } else if (rand < 0.22) {
-        terrain = TerrainType.OBSTACLE
+      } else if (rand < 0.25) {
+        terrain = TerrainType.VOID
       }
       
-      const tile: HexTile = {
+      row.push({
         coord,
         terrain,
+        entity: null,
         effects: []
-      }
-      
-      row.push(tile)
+      })
     }
     tiles.push(row)
   }
   
   return {
     tiles,
-    entities: [],
-    currentTurn: 1
+    width,
+    height
   }
 }
 
@@ -99,213 +90,199 @@ export const generateBattlefield = generateInitialBattlefield;
 export const placeEntityOnBattlefield = (
   battlefield: Battlefield,
   entity: Character | Enemy,
-  position: HexCoord
+  position: GridCoord
 ): Battlefield => {
-  // 深拷贝战场
+  // 深拷贝战场数据
   const newBattlefield = JSON.parse(JSON.stringify(battlefield))
   
-  // 查找对应的格子
-  for (let r = 0; r < newBattlefield.tiles.length; r++) {
-    for (let q = 0; q < newBattlefield.tiles[r].length; q++) {
-      const tile = newBattlefield.tiles[r][q]
-      
-      if (hexCoordsEqual(tile.coord, position)) {
-        // 确保该位置没有其他实体
-        if (tile.entity) {
-          console.warn('位置已被占用，无法放置实体')
-          return battlefield
-        }
-        
-        // 放置实体
-        newBattlefield.tiles[r][q].entity = entity
-        
-        // 更新实体列表
-        const entityIndex = newBattlefield.entities.findIndex(e => e.id === entity.id)
-        if (entityIndex >= 0) {
-          // 更新现有实体
-          newBattlefield.entities[entityIndex] = {
-            ...entity,
-            position
-          }
-        } else {
-          // 添加新实体
-          newBattlefield.entities.push({
-            ...entity,
-            position
-          })
-        }
-        
-        return newBattlefield
+  // 如果实体已经在战场上，先移除
+  for (let y = 0; y < battlefield.height; y++) {
+    for (let x = 0; x < battlefield.width; x++) {
+      const tile = newBattlefield.tiles[y][x]
+      if (tile.entity && 
+          ((tile.entity as Character).id === (entity as Character).id || 
+           (tile.entity as Enemy).id === (entity as Enemy).id)) {
+        tile.entity = null
       }
     }
   }
   
-  console.warn('找不到指定位置，无法放置实体')
-  return battlefield
+  // 放置实体到新位置
+  const { x, y } = position
+  if (x >= 0 && x < battlefield.width && y >= 0 && y < battlefield.height) {
+    newBattlefield.tiles[y][x].entity = entity
+    
+    // 更新实体位置
+    entity.position = { ...position }
+  }
+  
+  return newBattlefield
 }
 
 // 寻找从起点到终点的路径（使用A*算法）
 export const findPath = (
   battlefield: Battlefield,
-  start: HexCoord,
-  end: HexCoord
-): HexCoord[] => {
-  // A*算法实现
-  // 这里是简化版，实际游戏中需要考虑障碍物和地形成本
-  
-  // 如果起点和终点相同，返回空路径
-  if (hexCoordsEqual(start, end)) {
+  start: GridCoord,
+  end: GridCoord
+): GridCoord[] => {
+  // 检查起点和终点是否有效
+  if (start.x < 0 || start.x >= battlefield.width || 
+      start.y < 0 || start.y >= battlefield.height ||
+      end.x < 0 || end.x >= battlefield.width || 
+      end.y < 0 || end.y >= battlefield.height) {
     return []
   }
   
-  const openSet: HexCoord[] = [start]
-  const closedSet: HexCoord[] = []
+  // 检查终点是否可通行
+  if (battlefield.tiles[end.y][end.x].terrain === TerrainType.OBSTACLE ||
+      battlefield.tiles[end.y][end.x].entity !== null) {
+    return []
+  }
   
-  // 记录从起点到每个节点的成本
+  // A*算法实现
+  const openSet: GridCoord[] = [start]
+  const closedSet: GridCoord[] = []
+  
+  // 记录从起点到每个节点的最短路径
+  const cameFrom: Record<string, GridCoord> = {}
+  
+  // 从起点到每个节点的成本
   const gScore: Record<string, number> = {}
-  gScore[`${start.q},${start.r},${start.s}`] = 0
+  gScore[`${start.x},${start.y}`] = 0
   
-  // 记录从起点经过每个节点到终点的估计总成本
+  // 从每个节点到终点的估计成本
   const fScore: Record<string, number> = {}
-  fScore[`${start.q},${start.r},${start.s}`] = hexDistance(start, end)
-  
-  // 记录每个节点的前一个节点
-  const cameFrom: Record<string, HexCoord> = {}
+  fScore[`${start.x},${start.y}`] = gridDistance(start, end)
   
   while (openSet.length > 0) {
     // 找到openSet中fScore最小的节点
-    let current: HexCoord | null = null
-    let lowestFScore = Infinity
+    let current = openSet[0]
+    let currentIndex = 0
     
-    for (const node of openSet) {
-      const key = `${node.q},${node.r},${node.s}`
-      if (fScore[key] < lowestFScore) {
-        lowestFScore = fScore[key]
+    for (let i = 1; i < openSet.length; i++) {
+      const node = openSet[i]
+      const nodeKey = `${node.x},${node.y}`
+      const currentKey = `${current.x},${current.y}`
+      
+      if (fScore[nodeKey] < fScore[currentKey]) {
         current = node
+        currentIndex = i
       }
     }
     
-    if (!current) break
-    
-    // 如果当前节点是终点，重建路径并返回
-    if (hexCoordsEqual(current, end)) {
-      const path: HexCoord[] = [current]
-      let key = `${current.q},${current.r},${current.s}`
+    // 如果到达终点，重建路径并返回
+    if (current.x === end.x && current.y === end.y) {
+      const path: GridCoord[] = [current]
+      let temp = current
       
-      while (cameFrom[key]) {
-        current = cameFrom[key]
-        path.unshift(current)
-        key = `${current.q},${current.r},${current.s}`
+      while (`${temp.x},${temp.y}` in cameFrom) {
+        temp = cameFrom[`${temp.x},${temp.y}`]
+        path.unshift(temp)
       }
       
       return path
     }
     
-    // 从openSet中移除当前节点，并添加到closedSet
-    openSet.splice(openSet.findIndex(node => 
-      node.q === current.q && node.r === current.r && node.s === current.s
-    ), 1)
+    // 从openSet中移除当前节点，加入closedSet
+    openSet.splice(currentIndex, 1)
     closedSet.push(current)
     
     // 检查所有邻居
-    const neighbors = getHexNeighbors(current)
+    const neighbors = getGridNeighbors(current)
     
     for (const neighbor of neighbors) {
-      // 检查邻居是否在closedSet中
-      if (closedSet.some(node => 
-        node.q === neighbor.q && node.r === neighbor.r && node.s === neighbor.s
-      )) {
+      // 检查邻居是否有效
+      if (neighbor.x < 0 || neighbor.x >= battlefield.width || 
+          neighbor.y < 0 || neighbor.y >= battlefield.height) {
         continue
       }
       
-      // 检查邻居是否是有效的格子（在战场范围内且不是障碍物）
-      let isValid = false
-      let isTileObstacle = false
-      
-      for (const row of battlefield.tiles) {
-        for (const tile of row) {
-          if (hexCoordsEqual(tile.coord, neighbor)) {
-            isValid = true
-            isTileObstacle = tile.terrain === TerrainType.OBSTACLE
-            break
-          }
-        }
-        if (isValid) break
-      }
-      
-      if (!isValid || isTileObstacle) {
+      // 检查邻居是否可通行
+      const neighborTile = battlefield.tiles[neighbor.y][neighbor.x]
+      if (neighborTile.terrain === TerrainType.OBSTACLE || 
+          (neighborTile.entity !== null && !(neighbor.x === end.x && neighbor.y === end.y))) {
         continue
       }
+      
+      // 检查邻居是否已在closedSet中
+      if (closedSet.some(node => node.x === neighbor.x && node.y === neighbor.y)) {
+        continue
+      }
+      
+      const neighborKey = `${neighbor.x},${neighbor.y}`
+      const currentKey = `${current.x},${current.y}`
       
       // 计算从起点经过当前节点到邻居的成本
-      const tentativeGScore = gScore[`${current.q},${current.r},${current.s}`] + 1
+      const tentativeGScore = gScore[currentKey] + 1
       
-      // 检查邻居是否在openSet中
-      const isInOpenSet = openSet.some(node => 
-        node.q === neighbor.q && node.r === neighbor.r && node.s === neighbor.s
-      )
+      // 检查邻居是否已在openSet中
+      const isInOpenSet = openSet.some(node => node.x === neighbor.x && node.y === neighbor.y)
       
-      if (!isInOpenSet) {
-        openSet.push(neighbor)
-      } else if (tentativeGScore >= (gScore[`${neighbor.q},${neighbor.r},${neighbor.s}`] || Infinity)) {
-        continue
+      if (!isInOpenSet || tentativeGScore < (gScore[neighborKey] || Infinity)) {
+        // 更新路径和分数
+        cameFrom[neighborKey] = current
+        gScore[neighborKey] = tentativeGScore
+        fScore[neighborKey] = tentativeGScore + gridDistance(neighbor, end)
+        
+        if (!isInOpenSet) {
+          openSet.push(neighbor)
+        }
       }
-      
-      // 这是目前找到的最佳路径，记录它
-      cameFrom[`${neighbor.q},${neighbor.r},${neighbor.s}`] = current
-      gScore[`${neighbor.q},${neighbor.r},${neighbor.s}`] = tentativeGScore
-      fScore[`${neighbor.q},${neighbor.r},${neighbor.s}`] = tentativeGScore + hexDistance(neighbor, end)
     }
   }
   
-  // 如果没有找到路径，返回空数组
+  // 没有找到路径
   return []
 }
 
 // 检测移动轨迹的模式
-export const detectMovementPattern = (path: HexCoord[]): string => {
-  if (path.length <= 1) {
-    return 'static'
+export const detectMovementPattern = (path: GridCoord[]): string => {
+  if (path.length < 2) return '无模式'
+  
+  // 计算每一步的方向
+  const directions: string[] = []
+  
+  for (let i = 1; i < path.length; i++) {
+    const prev = path[i-1]
+    const curr = path[i]
+    
+    if (curr.x > prev.x) {
+      directions.push('右')
+    } else if (curr.x < prev.x) {
+      directions.push('左')
+    } else if (curr.y > prev.y) {
+      directions.push('下')
+    } else if (curr.y < prev.y) {
+      directions.push('上')
+    }
   }
   
-  if (path.length === 2) {
-    return 'linear'
+  // 检测直线模式
+  if (directions.every(dir => dir === directions[0])) {
+    return `直线-${directions[0]}`
   }
   
-  // 检测是否是直线
-  let isLinear = true
-  for (let i = 2; i < path.length; i++) {
-    const vector1 = {
-      q: path[1].q - path[0].q,
-      r: path[1].r - path[0].r,
-      s: path[1].s - path[0].s
-    }
-    
-    const vector2 = {
-      q: path[i].q - path[i-1].q,
-      r: path[i].r - path[i-1].r,
-      s: path[i].s - path[i-1].s
-    }
-    
-    // 检查两个向量是否平行
-    if (vector1.q * vector2.r !== vector1.r * vector2.q ||
-        vector1.r * vector2.s !== vector1.s * vector2.r ||
-        vector1.s * vector2.q !== vector1.q * vector2.s) {
-      isLinear = false
+  // 检测之字形模式
+  let isZigzag = true
+  for (let i = 2; i < directions.length; i++) {
+    if (directions[i] !== directions[i-2]) {
+      isZigzag = false
       break
     }
   }
   
-  if (isLinear) {
-    return 'linear'
+  if (isZigzag && directions.length >= 3) {
+    return `之字形-${directions[0]}-${directions[1]}`
   }
   
-  // 检测是否是环形
-  // 简化版：如果起点和终点相同，且路径长度大于2，认为是环形
-  if (hexCoordsEqual(path[0], path[path.length - 1]) && path.length > 2) {
-    return 'circular'
+  // 检测环形模式
+  if (
+    path.length >= 5 && 
+    Math.abs(path[0].x - path[path.length-1].x) <= 1 && 
+    Math.abs(path[0].y - path[path.length-1].y) <= 1
+  ) {
+    return '环形'
   }
   
-  // 默认为锯齿形
-  return 'zigzag'
+  return '复杂模式'
 }

@@ -1,4 +1,4 @@
-import { Character, CardPosition, CardType, ElementType, HexCoord } from '../types'
+import { Character, CardPosition, CardType, ElementType, GridCoord } from '../types'
 import { initialDeck } from './cards'
 
 // 初始角色数据
@@ -12,8 +12,9 @@ export const initialPlayerCharacter: Character = {
   deck: initialDeck,
   hand: [],
   discard: [],
-  position: { q: 0, r: 0, s: 0 } as HexCoord,
+  position: { x: 0, y: 0 } as GridCoord,
   effects: [],
+  description: '一位掌握命运之力的英雄',
   abilities: [
     {
       id: 'ability_1',
@@ -56,11 +57,12 @@ export const unlockableCharacters: Character[] = [
     maxHealth: 70,
     energy: 4,
     maxEnergy: 4,
-    deck: [], // 这里需要定义专属卡组
+    deck: initialDeck, // 使用相同的初始牌组
     hand: [],
     discard: [],
-    position: { q: 0, r: 0, s: 0 } as HexCoord,
+    position: { x: 0, y: 0 } as GridCoord,
     effects: [],
+    description: '一位掌握火焰之力的法师',
     abilities: [
       {
         id: 'fire_ability_1',
@@ -102,11 +104,12 @@ export const unlockableCharacters: Character[] = [
     maxHealth: 60,
     energy: 3,
     maxEnergy: 3,
-    deck: [], // 这里需要定义专属卡组
+    deck: initialDeck, // 使用相同的初始牌组
     hand: [],
     discard: [],
-    position: { q: 0, r: 0, s: 0 } as HexCoord,
+    position: { x: 0, y: 0 } as GridCoord,
     effects: [],
+    description: '一位掌握暗影之力的刺客',
     abilities: [
       {
         id: 'shadow_ability_1',
@@ -146,4 +149,3 @@ export const playerCharacters: Character[] = [
   initialPlayerCharacter,
   ...unlockableCharacters
 ]
-

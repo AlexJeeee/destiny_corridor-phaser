@@ -59,6 +59,7 @@ export interface Card {
   rarity: number; // 1-5，表示稀有度
   baseDamage?: number;
   baseDefense?: number;
+  value?: number; // 添加 value 属性
   effects: CardEffect[];
   imageUrl: string;
   // 正位和逆位效果
@@ -88,18 +89,12 @@ export interface Character {
   deck: Card[];
   hand: Card[];
   discard: Card[];
-  position: HexCoord;
+  position: GridCoord;
   effects: StatusEffect[];
   abilities: Ability[];
   // 添加角色选择场景需要的属性
   avatarUrl?: string;
-  title?: string;
   description?: string;
-  maxHp?: number;
-  attack?: number;
-  defense?: number;
-  speed?: number;
-  element?: ElementType;
 }
 
 // 敌人接口
@@ -110,22 +105,21 @@ export interface Enemy {
   maxHealth: number;
   intent: string;
   damage: number;
-  position: HexCoord;
+  position: GridCoord;
   effects: StatusEffect[];
   abilities: Ability[];
   imageUrl: string;
 }
 
-// 六边形坐标接口
-export interface HexCoord {
-  q: number; // 列坐标
-  r: number; // 行坐标
-  s: number; // 第三坐标 (q + r + s = 0)
+// 正方形坐标接口
+export interface GridCoord {
+  x: number; // 列坐标
+  y: number; // 行坐标
 }
 
 // 地图格子接口
-export interface HexTile {
-  coord: HexCoord;
+export interface GridTile {
+  coord: GridCoord;
   terrain: TerrainType;
   entity?: Character | Enemy | null;
   effects: StatusEffect[];
@@ -133,9 +127,9 @@ export interface HexTile {
 
 // 战场接口
 export interface Battlefield {
-  tiles: HexTile[][];
-  entities: (Character | Enemy)[];
-  currentTurn: number;
+  tiles: GridTile[][];
+  width: number;
+  height: number;
 }
 
 // 状态效果接口
@@ -208,7 +202,7 @@ export enum GamePhase {
 
 // 移动轨迹接口
 export interface MovementTrail {
-  path: HexCoord[];
+  path: GridCoord[];
   pattern: MovementPattern;
 }
 

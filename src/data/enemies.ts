@@ -1,4 +1,4 @@
-import { Enemy, HexCoord } from '../types'
+import { Enemy, GridCoord } from '../types'
 
 // 初始敌人数据
 export const initialEnemies: Enemy[] = [
@@ -9,7 +9,7 @@ export const initialEnemies: Enemy[] = [
     maxHealth: 20,
     intent: 'attack',
     damage: 5,
-    position: { q: 3, r: 3, s: -6 } as HexCoord,
+    position: { x: 3, y: 3 } as GridCoord,
     effects: [],
     abilities: [
       {
@@ -37,7 +37,7 @@ export const initialEnemies: Enemy[] = [
     maxHealth: 35,
     intent: 'defend',
     damage: 7,
-    position: { q: 4, r: 2, s: -6 } as HexCoord,
+    position: { x: 4, y: 2 } as GridCoord,
     effects: [],
     abilities: [
       {
@@ -71,7 +71,7 @@ export const initialEnemies: Enemy[] = [
     maxHealth: 25,
     intent: 'attack',
     damage: 8,
-    position: { q: 5, r: 1, s: -6 } as HexCoord,
+    position: { x: 5, y: 1 } as GridCoord,
     effects: [],
     abilities: [
       {
@@ -109,7 +109,7 @@ export const eliteEnemies: Enemy[] = [
     maxHealth: 60,
     intent: 'attack',
     damage: 12,
-    position: { q: 0, r: 0, s: 0 } as HexCoord,
+    position: { x: 0, y: 0 } as GridCoord,
     effects: [],
     abilities: [
       {
@@ -143,7 +143,7 @@ export const eliteEnemies: Enemy[] = [
     maxHealth: 70,
     intent: 'attack',
     damage: 10,
-    position: { q: 0, r: 0, s: 0 } as HexCoord,
+    position: { x: 0, y: 0 } as GridCoord,
     effects: [],
     abilities: [
       {
@@ -181,7 +181,7 @@ export const bossEnemies: Enemy[] = [
     maxHealth: 150,
     intent: 'special',
     damage: 15,
-    position: { q: 0, r: 0, s: 0 } as HexCoord,
+    position: { x: 0, y: 0 } as GridCoord,
     effects: [],
     abilities: [
       {
