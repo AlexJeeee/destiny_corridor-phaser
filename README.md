@@ -5,6 +5,7 @@
 ## 项目概述
 
 - **游戏类型**：2D卡牌Roguelike游戏
+- **游戏引擎**：Phaser
 - **开发语言**：React, JavaScript, TypeScript 和 Tailwind CSS
 - **平台**：PC优先，后续可扩展至移动端和主机平台
 
