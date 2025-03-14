@@ -1,0 +1,160 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --primary-color: #0ea5e9;
+  --secondary-color: #d946ef;
+  --accent-color: #f97316;
+  --background-color: #0f172a;
+  --text-color: #f8fafc;
+}
+
+body {
+  @apply bg-dark-900 text-dark-50 font-sans;
+  margin: 0;
+  min-height: 100vh;
+  overflow-x: hidden;
+}
+
+/* 六边形网格样式 */
+.hex-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(80px, 1fr));
+  gap: 2px;
+}
+
+.hex {
+  position: relative;
+  width: 100%;
+  padding-bottom: 115%; /* 六边形高宽比 */
+  clip-path: polygon(50% 0%, 100% 25%, 100% 75%, 50% 100%, 0% 75%, 0% 25%);
+  transition: all 0.3s ease;
+}
+
+/* 卡牌样式 */
+.card {
+  @apply rounded-lg overflow-hidden shadow-lg transition-all duration-300 ease-in-out;
+  perspective: 1000px;
+}
+
+.card-inner {
+  @apply relative w-full h-full transition-transform duration-500;
+  transform-style: preserve-3d;
+}
+
+.card-front,
+.card-back {
+  @apply absolute w-full h-full;
+  backface-visibility: hidden;
+}
+
+.card-back {
+  transform: rotateY(180deg);
+}
+
+.card.flipped .card-inner {
+  transform: rotateY(180deg);
+}
+
+/* 正位/逆位卡牌样式 */
+.card-upright {
+  @apply border-2 border-primary-500;
+}
+
+.card-reversed {
+  @apply border-2 border-secondary-500 rotate-180;
+}
+
+/* 命运轮盘样式 */
+.destiny-wheel {
+  @apply relative rounded-full;
+  width: 400px;
+  height: 400px;
+}
+
+.wheel-section {
+  @apply absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 transform-gpu;
+  width: 50%;
+  height: 2px;
+  transform-origin: left center;
+}
+
+/* 动画效果 */
+@keyframes float {
+  0%, 100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-10px);
+  }
+}
+
+.animate-float {
+  animation: float 3s ease-in-out infinite;
+}
+
+/* 自定义滚动条 */
+::-webkit-scrollbar {
+  width: 8px;
+}
+
+::-webkit-scrollbar-track {
+  @apply bg-dark-800;
+}
+
+::-webkit-scrollbar-thumb {
+  @apply bg-primary-700 rounded-full;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  @apply bg-primary-600;
+}
+
+/* 按钮样式 */
+.btn {
+  @apply px-4 py-2 rounded-md font-medium transition-all duration-200 ease-in-out;
+}
+
+.btn-primary {
+  @apply bg-primary-600 hover:bg-primary-700 text-white;
+}
+
+.btn-secondary {
+  @apply bg-secondary-600 hover:bg-secondary-700 text-white;
+}
+
+.btn-accent {
+  @apply bg-accent-600 hover:bg-accent-700 text-white;
+}
+
+.btn-outline {
+  @apply border border-primary-500 text-primary-500 hover:bg-primary-500 hover:text-white;
+}
+
+/* 游戏UI元素 */
+.energy-orb {
+  @apply rounded-full bg-gradient-to-br from-primary-400 to-primary-700 flex items-center justify-center text-white font-bold shadow-lg;
+  width: 40px;
+  height: 40px;
+}
+
+.health-bar {
+  @apply h-4 rounded-full bg-dark-700 overflow-hidden;
+}
+
+.health-bar-fill {
+  @apply h-full bg-gradient-to-r from-red-500 to-red-600 transition-all duration-300;
+}
+
+/* 响应式设计 */
+@media (max-width: 768px) {
+  .hex-grid {
+    grid-template-columns: repeat(auto-fit, minmax(60px, 1fr));
+  }
+  
+  .destiny-wheel {
+    width: 300px;
+    height: 300px;
+  }
+}
