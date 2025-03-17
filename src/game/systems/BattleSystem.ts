@@ -1,6 +1,7 @@
 import Phaser from 'phaser';
-import { Character, Enemy, Card, GridCoord, CardPosition } from '@/types';
+import { Character, Enemy, Card, GridCoord, CardPosition, CardType, CardEffectType, CardEffect, Target } from '@/types';
 import { gridDistance } from '@/utils/battlefieldUtils';
+import { PlayerManager } from '@/game/scenes/game-board-scene/components/PlayerManager';
 
 // 战斗系统类
 export class BattleSystem {
@@ -13,14 +14,22 @@ export class BattleSystem {
   private selectedEnemy: Enemy | null = null;
   private onTurnEnd: () => void;
   private onBattleEnd: (victory: boolean) => void;
+  private playerManager: PlayerManager;
 
-  constructor(scene: Phaser.Scene, player: Character, enemies: Enemy[], 
-              onTurnEnd: () => void, onBattleEnd: (victory: boolean) => void) {
+  constructor(
+    scene: Phaser.Scene, 
+    playerManager: PlayerManager, 
+    player: Character, 
+    enemies: Enemy[], 
+    onTurnEnd: () => void, 
+    onBattleEnd: (victory: boolean) => void
+  ) {
     this.scene = scene;
     this.player = player;
     this.enemies = enemies;
     this.onTurnEnd = onTurnEnd;
     this.onBattleEnd = onBattleEnd;
+    this.playerManager = playerManager;
   }
 
   // 开始战斗
@@ -182,32 +191,35 @@ export class BattleSystem {
     
     // 查找可用的攻击技能
     const attackAbility = enemy.abilities.find(ability => 
-      ability.effects.some(effect => effect.type === 'damage') && 
+      ability.effects.some(effect => effect.type === CardEffectType.DAMAGE) && 
       ability.currentCooldown === 0
     );
+
+    // 计算抵消伤害
+    const deductionValue = this.player.effects.reduce((acc, effect) => {
+      if ((effect.type === CardEffectType.DEFENSE || effect.type === CardEffectType.SHIELD) && effect.duration > 0) {
+        return acc + effect.value;
+      }
+      return acc;
+    }, 0);
     
     if (attackAbility) {
       console.log(`敌人使用技能: ${attackAbility.name}`);
       
       // 计算伤害
-      const damageEffect = attackAbility.effects.find(effect => effect.type === 'damage');
+      const damageEffect = attackAbility.effects.find(effect => effect.type === CardEffectType.DAMAGE);
       let damage = damageEffect ? damageEffect.value : enemy.damage;
       
       // 应用伤害到玩家
-      this.player.health = Math.max(0, this.player.health - damage);
-      
-      console.log(`玩家受到 ${damage} 点伤害，剩余生命值: ${this.player.health}`);
+      this.damagePlayer(damage);
       
       // 设置技能冷却
       attackAbility.currentCooldown = attackAbility.cooldown;
     } else {
       // 使用基础攻击
       console.log(`敌人使用基础攻击`);
-      
       // 应用伤害到玩家
-      this.player.health = Math.max(0, this.player.health - enemy.damage);
-      
-      console.log(`玩家受到 ${enemy.damage} 点伤害，剩余生命值: ${this.player.health}`);
+      this.damagePlayer(enemy.damage);
     }
   }
 
@@ -221,7 +233,7 @@ export class BattleSystem {
       name: '防御',
       description: '减少受到的伤害',
       imageUrl: 'assets/images/effects/defense.png',
-      type: 'defense',
+      type: CardEffectType.DEFENSE,
       value: Math.floor(enemy.damage * 1.5),
       duration: 1
     });
@@ -234,9 +246,9 @@ export class BattleSystem {
     // 查找可用的增益技能
     const buffAbility = enemy.abilities.find(ability => 
       ability.effects.some(effect => 
-        effect.type === 'strength' || 
-        effect.type === 'defense' || 
-        effect.type === 'heal'
+        effect.type === CardEffectType.STRENGTH || 
+        effect.type === CardEffectType.DEFENSE || 
+        effect.type === CardEffectType.HEAL
       ) && 
       ability.currentCooldown === 0
     );
@@ -246,7 +258,7 @@ export class BattleSystem {
       
       // 应用增益效果
       buffAbility.effects.forEach(effect => {
-        if (effect.type === 'heal') {
+        if (effect.type === CardEffectType.HEAL) {
           // 治疗效果
           enemy.health = Math.min(enemy.maxHealth, enemy.health + effect.value);
           console.log(`敌人恢复了 ${effect.value} 点生命值，当前生命值: ${enemy.health}`);
@@ -280,9 +292,9 @@ export class BattleSystem {
     // 查找可用的减益技能
     const debuffAbility = enemy.abilities.find(ability => 
       ability.effects.some(effect => 
-        effect.type === 'weakness' || 
-        effect.type === 'vulnerable' || 
-        effect.type === 'poison'
+        effect.type === CardEffectType.WEAKEN || 
+        effect.type === CardEffectType.VULNERABLE || 
+        effect.type === CardEffectType.POISON
       ) && 
       ability.currentCooldown === 0
     );
@@ -344,13 +356,13 @@ export class BattleSystem {
       
       // 应用效果
       switch (effect.type) {
-        case 'poison':
+        case CardEffectType.POISON:
           // 中毒效果，每回合造成伤害
           const poisonDamage = effect.value;
           entity.health = Math.max(0, entity.health - poisonDamage);
           console.log(`${entity.name} 受到 ${poisonDamage} 点中毒伤害，剩余生命值: ${entity.health}`);
           break;
-        case 'block':
+        case CardEffectType.DEFENSE:
           // 防御效果在这里不需要特殊处理，只需要保留到下一回合
           console.log(`${entity.name} 有 ${effect.value} 点护盾`);
           break;
@@ -367,29 +379,27 @@ export class BattleSystem {
   }
 
   // 获取效果名称
-  private getEffectName(effectType: string): string {
+  private getEffectName(effectType: CardEffectType): string {
     switch (effectType) {
-      case 'strength': return '力量增强';
-      case 'defense': return '防御增强';
-      case 'weakness': return '虚弱';
-      case 'vulnerable': return '易伤';
-      case 'poison': return '中毒';
-      case 'boost_element': return '元素增强';
-      case 'block': return '护盾';
-      default: return effectType;
+      case CardEffectType.STRENGTH: return '力量增强';
+      case CardEffectType.DEFENSE: return '防御';
+      case CardEffectType.WEAKEN: return '虚弱';
+      case CardEffectType.VULNERABLE: return '易伤';
+      case CardEffectType.POISON: return '中毒';
+      case CardEffectType.BOOST_ELEMENT: return '元素增强';
+      default: return effectType.toString();
     }
   }
   
   // 获取效果描述
-  private getEffectDescription(effectType: string): string {
+  private getEffectDescription(effectType: CardEffectType): string {
     switch (effectType) {
-      case 'strength': return '增加攻击伤害';
-      case 'defense': return '减少受到的伤害';
-      case 'weakness': return '降低攻击伤害';
-      case 'vulnerable': return '增加受到的伤害';
-      case 'poison': return '每回合受到伤害';
-      case 'boost_element': return '增强特定元素的效果';
-      case 'block': return '减少受到的伤害';
+      case CardEffectType.STRENGTH: return '增加攻击伤害';
+      case CardEffectType.DEFENSE: return '减少受到的伤害';
+      case CardEffectType.WEAKEN: return '降低攻击伤害';
+      case CardEffectType.VULNERABLE: return '增加受到的伤害';
+      case CardEffectType.POISON: return '每回合受到伤害';
+      case CardEffectType.BOOST_ELEMENT: return '增强特定元素的效果';
       default: return '状态效果';
     }
   }
@@ -462,10 +472,10 @@ export class BattleSystem {
     
     // 应用卡牌效果
     for (const effect of effects) {
-      if (effect.type === 'heal') {
+      if (effect.type === CardEffectType.HEAL) {
         this.applyHealEffect(effect);
-      } else if (effect.type === 'block') {
-        this.applyBlockEffect(effect);
+      } else if (effect.type === CardEffectType.DEFENSE) {
+        this.applyDefenseEffect(effect);
       }
       // 其他可能的自我效果
     }
@@ -488,22 +498,22 @@ export class BattleSystem {
     // 应用卡牌效果
     for (const effect of effects) {
       switch (effect.type) {
-        case 'damage':
+        case CardEffectType.DAMAGE:
           this.applyDamageEffect(effect, target, card);
           break;
-        case 'heal':
+        case CardEffectType.HEAL:
           this.applyHealEffect(effect);
           break;
-        case 'block':
-          this.applyBlockEffect(effect);
+        case CardEffectType.DEFENSE:
+          this.applyDefenseEffect(effect);
           break;
-        case 'draw':
+        case CardEffectType.DRAW_CARD:
           this.applyDrawEffect(effect);
           break;
-        case 'energy':
+        case CardEffectType.ENERGY_GAIN:
           this.applyEnergyEffect(effect);
           break;
-        case 'aoe_damage':
+        case CardEffectType.AOE_DAMAGE:
           this.applyAoeDamageEffect(effect, target, card);
           break;
         // 可以添加更多效果类型的处理
@@ -526,29 +536,29 @@ export class BattleSystem {
   }
 
   // 应用防御效果
-  private applyBlockEffect(effect: any): void {
+  private applyDefenseEffect(effect: CardEffect): void {
     const blockAmount = effect.value;
     
-    if (effect.target === 'self') {
+    if (effect.target === Target.SELF) {
       // 添加防御效果到玩家
       this.player.effects.push({
-        id: `block_${Date.now()}`,
+        id: `defense_${Date.now()}`,
         name: '护盾',
         description: '减少受到的伤害',
         imageUrl: 'assets/images/effects/block.png',
-        type: 'block',
+        type: CardEffectType.DEFENSE,
         value: blockAmount,
         duration: 1 // 防御效果通常持续到下一回合
       });
       console.log(`玩家获得了 ${blockAmount} 点护盾`);
-    } else if (effect.target === 'single_ally') {
+    } else if (effect.target === Target.SINGLE_ALLY) {
       // 如果有队友系统，可以在这里添加对特定队友的防御
       this.player.effects.push({
-        id: `block_${Date.now()}`,
+        id: `defense_${Date.now()}`,
         name: '护盾',
         description: '减少受到的伤害',
         imageUrl: 'assets/images/effects/block.png',
-        type: 'block',
+        type: CardEffectType.DEFENSE,
         value: blockAmount,
         duration: 1
       });
@@ -581,8 +591,8 @@ export class BattleSystem {
     let damage = effect.value;
     
     // 应用元素加成
-    if (card && this.player.effects.some(e => e.type === 'boost_element' && e.target === card.element)) {
-      const boost = this.player.effects.find(e => e.type === 'boost_element' && e.target === card.element);
+    if (card && this.player.effects.some(e => e.type === CardEffectType.BOOST_ELEMENT && e.target === card.element)) {
+      const boost = this.player.effects.find(e => e.type === CardEffectType.BOOST_ELEMENT && e.target === card.element);
       if (boost) {
         damage = Math.floor(damage * (1 + boost.value));
         console.log(`元素加成: 伤害提升至 ${damage}`);
@@ -593,8 +603,7 @@ export class BattleSystem {
       // 对所有敌人造成伤害
       for (const enemy of this.enemies) {
         if (enemy.health > 0) {
-          enemy.health = Math.max(0, enemy.health - damage);
-          console.log(`对 ${enemy.name} 造成 ${damage} 点伤害，剩余生命值: ${enemy.health}`);
+          this.damageEnemy(enemy, damage);
         }
       }
     } else if (effect.target === 'adjacent' && target) {
@@ -603,8 +612,7 @@ export class BattleSystem {
         if (enemy.health > 0 && enemy.id !== target.id) {
           const distance = gridDistance(enemy.position, target.position);
           if (distance <= 1) { // 相邻距离为1
-            enemy.health = Math.max(0, enemy.health - damage);
-            console.log(`对相邻敌人 ${enemy.name} 造成 ${damage} 点伤害，剩余生命值: ${enemy.health}`);
+            this.damageEnemy(enemy, damage);
           }
         }
       }
@@ -621,8 +629,8 @@ export class BattleSystem {
     let damage = effect.value;
     
     // 应用元素加成
-    if (card && this.player.effects.some(e => e.type === 'boost_element' && e.target === card.element)) {
-      const boost = this.player.effects.find(e => e.type === 'boost_element' && e.target === card.element);
+    if (card && this.player.effects.some(e => e.type === CardEffectType.BOOST_ELEMENT && e.target === card.element)) {
+      const boost = this.player.effects.find(e => e.type === CardEffectType.BOOST_ELEMENT && e.target === card.element);
       if (boost) {
         damage = Math.floor(damage * (1 + boost.value));
         console.log(`元素加成: 伤害提升至 ${damage}`);
@@ -630,51 +638,12 @@ export class BattleSystem {
     }
     
     if (effect.target === 'single' && target) {
-      // 检查目标是否有防御效果
-      const blockEffect = target.effects.find(e => e.type === 'block');
-      if (blockEffect) {
-        if (blockEffect.value >= damage) {
-          // 防御完全抵消伤害
-          blockEffect.value -= damage;
-          console.log(`${target.name} 的护盾抵消了 ${damage} 点伤害，剩余护盾: ${blockEffect.value}`);
-          damage = 0;
-        } else {
-          // 防御部分抵消伤害
-          damage -= blockEffect.value;
-          console.log(`${target.name} 的护盾抵消了 ${blockEffect.value} 点伤害，剩余伤害: ${damage}`);
-          blockEffect.value = 0;
-        }
-      }
-      
-      // 对单个目标造成伤害
-      if (damage > 0) {
-        target.health = Math.max(0, target.health - damage);
-        console.log(`对 ${target.name} 造成 ${damage} 点伤害，剩余生命值: ${target.health}`);
-      }
+      this.damageEnemy(target, damage);
     } else if (effect.target === 'all') {
       // 对所有敌人造成伤害
       for (const enemy of this.enemies) {
         if (enemy.health > 0) {
-          let enemyDamage = damage;
-          
-          // 检查敌人是否有防御效果
-          const blockEffect = enemy.effects.find(e => e.type === 'block');
-          if (blockEffect) {
-            if (blockEffect.value >= enemyDamage) {
-              blockEffect.value -= enemyDamage;
-              console.log(`${enemy.name} 的护盾抵消了 ${enemyDamage} 点伤害，剩余护盾: ${blockEffect.value}`);
-              enemyDamage = 0;
-            } else {
-              enemyDamage -= blockEffect.value;
-              console.log(`${enemy.name} 的护盾抵消了 ${blockEffect.value} 点伤害，剩余伤害: ${enemyDamage}`);
-              blockEffect.value = 0;
-            }
-          }
-          
-          if (enemyDamage > 0) {
-            enemy.health = Math.max(0, enemy.health - enemyDamage);
-            console.log(`对 ${enemy.name} 造成 ${enemyDamage} 点伤害，剩余生命值: ${enemy.health}`);
-          }
+          this.damageEnemy(enemy, damage);
         }
       }
     } else if (effect.target === 'area' && target) {
@@ -684,27 +653,70 @@ export class BattleSystem {
           const distance = gridDistance(enemy.position, target.position);
           if (distance <= (effect.radius || 1)) {
             let enemyDamage = distance === 0 ? damage : Math.floor(damage / 2);
-            
-            // 检查敌人是否有防御效果
-            const blockEffect = enemy.effects.find(e => e.type === 'block');
-            if (blockEffect) {
-              if (blockEffect.value >= enemyDamage) {
-                blockEffect.value -= enemyDamage;
-                console.log(`${enemy.name} 的护盾抵消了 ${enemyDamage} 点伤害，剩余护盾: ${blockEffect.value}`);
-                enemyDamage = 0;
-              } else {
-                enemyDamage -= blockEffect.value;
-                console.log(`${enemy.name} 的护盾抵消了 ${blockEffect.value} 点伤害，剩余伤害: ${enemyDamage}`);
-                blockEffect.value = 0;
-              }
-            }
-            
-            if (enemyDamage > 0) {
-              enemy.health = Math.max(0, enemy.health - enemyDamage);
-              console.log(`对 ${enemy.name} 造成 ${enemyDamage} 点伤害，剩余生命值: ${enemy.health}`);
-            }
+            this.damageEnemy(enemy, enemyDamage);
           }
         }
+      }
+    }
+  }
+
+  // 对玩家造成伤害
+  public damagePlayer(damage: number): void {
+    // 计算抵消伤害
+    const deductionValue = this.player.effects.reduce((acc, effect) => {
+      if ((effect.type === CardEffectType.DEFENSE || effect.type === CardEffectType.SHIELD) && effect.duration > 0) {
+        return acc + effect.value;
+      }
+      return acc;
+    }, 0);
+
+    console.log(`抵消伤害: ${deductionValue}`, this.player.effects);
+    
+    const actualDamage = Math.max(0, damage - deductionValue);
+    
+    // 应用伤害到玩家
+    this.player.health = Math.max(0, this.player.health - actualDamage);
+    
+    console.log(`玩家受到 ${actualDamage} 点伤害，剩余生命值: ${this.player.health}`);
+    // 显示伤害视觉效果
+    this.playerManager.damagePlayer(actualDamage);
+    
+    // 检查玩家是否死亡
+    if (this.player.health <= 0) {
+      this.endBattle(false);
+    }
+  }
+
+  // 对敌人造成伤害
+  public damageEnemy(enemy: Enemy, damage: number): void {
+    if (!enemy || enemy.health <= 0) return;
+    
+    // 检查目标是否有防御效果
+    const blockEffect = enemy.effects.find(e => e.type === CardEffectType.DEFENSE);
+    let actualDamage = damage;
+    
+    if (blockEffect) {
+      if (blockEffect.value >= actualDamage) {
+        // 防御完全抵消伤害
+        blockEffect.value -= actualDamage;
+        console.log(`${enemy.name} 的护盾抵消了 ${actualDamage} 点伤害，剩余护盾: ${blockEffect.value}`);
+        actualDamage = 0;
+      } else {
+        // 防御部分抵消伤害
+        actualDamage -= blockEffect.value;
+        console.log(`${enemy.name} 的护盾抵消了 ${blockEffect.value} 点伤害，剩余伤害: ${actualDamage}`);
+        blockEffect.value = 0;
+      }
+    }
+    
+    // 对敌人造成伤害
+    if (actualDamage > 0) {
+      enemy.health = Math.max(0, enemy.health - actualDamage);
+      console.log(`对 ${enemy.name} 造成 ${actualDamage} 点伤害，剩余生命值: ${enemy.health}`);
+      
+      // 检查敌人是否死亡
+      if (enemy.health <= 0) {
+        console.log(`敌人 ${enemy.name} 已被击败`);
       }
     }
   }

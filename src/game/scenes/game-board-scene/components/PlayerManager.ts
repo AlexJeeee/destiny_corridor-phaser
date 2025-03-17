@@ -81,9 +81,6 @@ export class PlayerManager {
   damagePlayer(damage: number): void {
     if (!this.player) return;
     
-    // 对玩家造成伤害
-    this.player.health = Math.max(0, this.player.health - damage);
-    
     // 显示伤害数字
     if (this.playerSprite) {
       const damageText = this.scene.add.text(this.playerSprite.x, this.playerSprite.y - 20, `-${damage}`, {

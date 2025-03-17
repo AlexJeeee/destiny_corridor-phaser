@@ -1,5 +1,5 @@
 import Phaser from 'phaser';
-import { Card, Character } from '@/types';
+import { Card, Character, CardType, CardEffectType } from '@/types';
 
 export class CardManager {
   private scene: Phaser.Scene;
@@ -114,7 +114,7 @@ export class CardManager {
       const ySpacing = 16; // Y轴间距
       
       // 添加攻击数值
-      if (card.baseDamage || card.type === 'attack') {
+      if (card.baseDamage || card.type === CardType.ATTACK) {
         const damage = card.baseDamage || 0;
         const attackText = this.scene.add.text(0, yOffset, `攻击: ${damage}`, {
           fontFamily: 'Arial',
@@ -126,7 +126,7 @@ export class CardManager {
       }
       
       // 添加防御数值
-      if (card.baseDefense || card.type === 'defense') {
+      if (card.baseDefense || card.type === CardType.DEFENSE) {
         const defense = card.baseDefense || 0;
         const defenseText = this.scene.add.text(0, yOffset, `防御: ${defense}`, {
           fontFamily: 'Arial',
@@ -138,8 +138,8 @@ export class CardManager {
       }
       
       // 添加治愈数值
-      if (card.type === 'skill' && card.effects.some(e => e.type === 'heal')) {
-        const healEffect = card.effects.find(e => e.type === 'heal');
+      if (card.type === CardType.SKILL && card.effects.some(e => e.type === CardEffectType.HEAL)) {
+        const healEffect = card.effects.find(e => e.type === CardEffectType.HEAL);
         const healValue = healEffect ? healEffect.value : 0;
         const healText = this.scene.add.text(0, yOffset, `治愈: ${healValue}`, {
           fontFamily: 'Arial',

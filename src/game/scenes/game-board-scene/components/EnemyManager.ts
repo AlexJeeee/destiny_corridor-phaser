@@ -145,9 +145,6 @@ export class EnemyManager {
       onComplete: () => attackEffect.destroy()
     });
     
-    // 对敌人造成伤害
-    enemy.health = Math.max(0, enemy.health - damage);
-    
     // 更新敌人信息显示
     this.updateEnemyInfo(enemy);
     

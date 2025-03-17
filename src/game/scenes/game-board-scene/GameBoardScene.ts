@@ -1,6 +1,6 @@
 import Phaser from 'phaser';
 import { BaseScene } from '../BaseScene';
-import { Character, Enemy, GridCoord, Card } from '@/types';
+import { Character, Enemy, GridCoord, Card, CardType, CardEffectType } from '@/types';
 import { getEnemiesByFloor } from '@/data/enemies';
 import { 
   BattlefieldManager, 
@@ -146,11 +146,15 @@ export class GameBoardScene extends BaseScene {
     if (this.player) {
       this.battleSystem = new BattleSystem(
         this,
+        this.playerManager,
         this.player,
         this.enemyManager.getEnemies(),
         () => { /* 回合结束回调 */ },
         (victory: boolean) => { /* 战斗结束回调 */ }
       );
+      
+      // 设置TurnManager的BattleSystem引用
+      this.turnManager.setBattleSystem(this.battleSystem);
     }
     
     // 设置格子点击事件
@@ -180,7 +184,7 @@ export class GameBoardScene extends BaseScene {
     // 处理卡牌选中事件
     if (this.turnManager.getCurrentTurn() === 'player' && this.player) {
       // 根据卡牌类型决定操作
-      if (card.type === 'movement') {
+      if (card.type === CardType.MOVEMENT) {
         // 显示可移动的位置
         const playerPos = this.playerManager.getPlayerPosition();
         if (playerPos) {
@@ -188,7 +192,7 @@ export class GameBoardScene extends BaseScene {
           const validMoves = this.battlefieldManager.getValidMoves(playerPos, 2, enemyPositions);
           this.battlefieldManager.showValidMoves(validMoves);
         }
-      } else if (card.type === 'attack') {
+      } else if (card.type === CardType.ATTACK) {
         // 显示可攻击的敌人
         const playerPos = this.playerManager.getPlayerPosition();
         if (playerPos) {
@@ -206,7 +210,7 @@ export class GameBoardScene extends BaseScene {
           
           this.battlefieldManager.showAttackableEnemies(attackablePositions);
         }
-      } else if (card.type === 'defense' || (card.type === 'skill' && card.effects.some(e => e.type === 'heal' || e.type === 'block'))) {
+      } else if (card.type === CardType.DEFENSE || (card.type === CardType.SKILL && card.effects.some(e => e.type === CardEffectType.HEAL || e.type === CardEffectType.DEFENSE))) {
         // 对于防御和治疗卡牌，高亮显示玩家自身
         const playerPos = this.playerManager.getPlayerPosition();
         if (playerPos) {
@@ -240,7 +244,7 @@ export class GameBoardScene extends BaseScene {
         
         if (isValidMove && selectedCard) {
           // 检查卡牌类型
-          if (selectedCard.type === 'movement') {
+          if (selectedCard.type === CardType.MOVEMENT) {
             // 移动玩家
             this.playerManager.movePlayer(coord);
             
@@ -258,12 +262,15 @@ export class GameBoardScene extends BaseScene {
       }
       
       // 检查是否点击了敌人（攻击卡牌）
-      if (selectedCard && selectedCard.type === 'attack') {
+      if (selectedCard && selectedCard.type === CardType.ATTACK) {
         const clickedEnemy = this.enemyManager.findEnemyByPosition(coord);
         
-        if (clickedEnemy) {
-          // 攻击敌人，使用卡牌自身的伤害值
+        if (clickedEnemy && this.battleSystem) {
+          // 使用BattleSystem攻击敌人
           const damage = selectedCard.baseDamage || 1; // 如果卡牌没有伤害值，默认为1
+          this.battleSystem.damageEnemy(clickedEnemy, damage);
+          
+          // 显示视觉效果
           this.enemyManager.attackEnemy(clickedEnemy, damage);
           
           // 使用卡牌
@@ -292,9 +299,9 @@ export class GameBoardScene extends BaseScene {
       }
       
       // 检查是否点击了玩家自身（防御或治疗卡牌）
-      if (selectedCard && (selectedCard.type === 'defense' || 
-          (selectedCard.type === 'skill' && selectedCard.effects && 
-           selectedCard.effects.some(e => e.type === 'heal' || e.type === 'block')))) {
+      if (selectedCard && (selectedCard.type === CardType.DEFENSE || 
+          (selectedCard.type === CardType.SKILL && selectedCard.effects && 
+           selectedCard.effects.some(e => e.type === CardEffectType.HEAL || e.type === CardEffectType.DEFENSE)))) {
         
         // 检查点击的是否是玩家位置
         const isPlayerPosition = playerPos && coord.x === playerPos.x && coord.y === playerPos.y;

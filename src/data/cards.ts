@@ -1,4 +1,4 @@
-import { Card, CardPosition, CardType, ElementType } from '../types'
+import { Card, CardPosition, CardType, ElementType, CardEffectType, Target } from '../types'
 
 // 初始卡组
 export const initialDeck: Card[] = [
@@ -14,28 +14,28 @@ export const initialDeck: Card[] = [
     baseDamage: 6,
     effects: [
       {
-        type: 'damage',
+        type: CardEffectType.DAMAGE,
         value: 6,
-        target: 'single'
+        target: Target.SINGLE_ENEMY
       }
     ],
     uprightEffect: [
       {
-        type: 'damage',
+        type: CardEffectType.DAMAGE,
         value: 6,
-        target: 'single'
+        target: Target.SINGLE_ENEMY
       }
     ],
     reversedEffect: [
       {
-        type: 'damage',
+        type: CardEffectType.DAMAGE,
         value: 4,
-        target: 'single'
+        target: Target.SINGLE_ENEMY
       },
       {
-        type: 'aoe_damage',
+        type: CardEffectType.AOE_DAMAGE,
         value: 2,
-        target: 'adjacent'
+        target: Target.AREA
       }
     ],
     imageUrl: '/assets/cards/fireball.png',
@@ -54,12 +54,12 @@ export const initialDeck: Card[] = [
     baseDamage: 5,
     effects: [
       {
-        type: 'damage',
+        type: CardEffectType.DAMAGE,
         value: 5,
-        target: 'single'
+        target: Target.SINGLE_ENEMY
       },
       {
-        type: 'freeze',
+        type: CardEffectType.FREEZE,
         value: 1,
         duration: 1,
         target: 'single'
@@ -68,28 +68,28 @@ export const initialDeck: Card[] = [
     imageUrl: '/assets/cards/ice_spike.png',
     uprightEffect: [
       {
-        type: 'damage',
+        type: CardEffectType.DAMAGE,
         value: 5,
-        target: 'single'
+        target: Target.SINGLE_ENEMY
       },
       {
-        type: 'freeze',
+        type: CardEffectType.FREEZE,
         value: 1,
         duration: 1,
-        target: 'single'
+        target: Target.SINGLE_ENEMY
       }
     ],
     reversedEffect: [
       {
-        type: 'damage',
+        type: CardEffectType.DAMAGE,
         value: 3,
-        target: 'single'
+        target: Target.SINGLE_ENEMY
       },
       {
-        type: 'freeze',
+        type: CardEffectType.FREEZE,
         value: 1,
         duration: 1,
-        target: 'single'
+        target: Target.SINGLE_ENEMY
       }
     ],
     uprightEffectDesc: '对单个目标造成5点冰冻伤害并施加1回合冰冻效果',
@@ -106,29 +106,29 @@ export const initialDeck: Card[] = [
     rarity: 1,
     effects: [
       {
-        type: 'heal',
+        type: CardEffectType.HEAL,
         value: 5,
-        target: 'single_ally'
+        target: Target.SINGLE_ALLY
       }
     ],
     imageUrl: '/assets/cards/healing_light.png',
     uprightEffect: [
       {
-        type: 'heal',
+        type: CardEffectType.HEAL,
         value: 5,
-        target: 'single_ally'
+        target: Target.SINGLE_ALLY
       }
     ],
     reversedEffect: [
       {
-        type: 'heal',
+        type: CardEffectType.HEAL,
         value: 3,
-        target: 'single_ally'
+        target: Target.SINGLE_ALLY
       },
       {
-        type: 'remove_negative_effect',
+        type: CardEffectType.REMOVE_NEGATIVE_EFFECT,
         value: 1,
-        target: 'single_ally'
+        target: Target.SINGLE_ALLY
       }
     ],
     uprightEffectDesc: '治疗单个目标5点生命值',
@@ -146,29 +146,29 @@ export const initialDeck: Card[] = [
     baseDefense: 5,
     effects: [
       {
-        type: 'block',
+        type: CardEffectType.DEFENSE,
         value: 5,
-        target: 'self'
+        target: Target.SELF
       }
     ],
     imageUrl: '/assets/cards/defense_stance.png',
     uprightEffect: [
       {
-        type: 'block',
+        type: CardEffectType.DEFENSE,
         value: 5,
-        target: 'self'
+        target: Target.SELF
       }
     ],
     reversedEffect: [
       {
-        type: 'block',
+        type: CardEffectType.DEFENSE,
         value: 3,
-        target: 'self'
+        target: Target.SELF
       },
       {
-        type: 'energy_gain',
+        type: CardEffectType.ENERGY_GAIN,
         value: 1,
-        target: 'self'
+        target: Target.SELF
       }
     ],
     uprightEffectDesc: '获得5点护盾',
@@ -185,29 +185,29 @@ export const initialDeck: Card[] = [
     rarity: 1,
     effects: [
       {
-        type: 'move',
+        type: CardEffectType.MOVE,
         value: 2,
-        target: 'self'
+        target: Target.SELF
       }
     ],
     imageUrl: '/assets/cards/swift_move.png',
     uprightEffect: [
       {
-        type: 'move',
+        type: CardEffectType.MOVE,
         value: 2,
-        target: 'self'
+        target: Target.SELF
       }
     ],
     reversedEffect: [
       {
-        type: 'move',
+        type: CardEffectType.MOVE,
         value: 1,
-        target: 'self'
+        target: Target.SELF
       },
       {
-        type: 'damage',
+        type: CardEffectType.DAMAGE,
         value: 1,
-        target: 'adjacent'
+        target: Target.ADJACENT
       }
     ],
     uprightEffectDesc: '移动最多2格距离',
@@ -225,24 +225,24 @@ export const initialDeck: Card[] = [
     baseDamage: 4,
     effects: [
       {
-        type: 'chain_damage',
+        type: CardEffectType.CHAIN_DAMAGE,
         value: 4,
-        target: 'multi'
+        target: Target.MULTI
       }
     ],
     imageUrl: '/assets/cards/lightning_chain.png',
     uprightEffect: [
       {
-        type: 'chain_damage',
+        type: CardEffectType.CHAIN_DAMAGE,
         value: 4,
-        target: 'multi'
+        target: Target.MULTI
       }
     ],
     reversedEffect: [
       {
-        type: 'damage',
+        type: CardEffectType.DAMAGE,
         value: 8,
-        target: 'single'
+        target: Target.SINGLE_ENEMY
       }
     ],
     uprightEffectDesc: '对最多3个相邻敌人造成4点雷电伤害',
@@ -260,42 +260,42 @@ export const initialDeck: Card[] = [
     baseDefense: 8,
     effects: [
       {
-        type: 'block',
+        type: CardEffectType.DEFENSE,
         value: 8,
-        target: 'self'
+        target: Target.SELF
       },
       {
-        type: 'thorns',
+        type: CardEffectType.THORNS,
         value: 2,
         duration: 2,
-        target: 'self'
+        target: Target.SELF
       }
     ],
     imageUrl: '/assets/cards/earth_shield.png',
     uprightEffect: [
       {
-        type: 'block',
+        type: CardEffectType.DEFENSE,
         value: 8,
-        target: 'self'
+        target: Target.SELF
       },
       {
-        type: 'thorns',
+        type: CardEffectType.THORNS,
         value: 2,
         duration: 2,
-        target: 'self'
+        target: Target.SELF
       }
     ],
     reversedEffect: [
       {
-        type: 'block',
+        type: CardEffectType.DEFENSE,
         value: 5,
-        target: 'self'
+        target: Target.SELF
       },
       {
-        type: 'obstacle',
+        type: CardEffectType.OBSTACLE,
         value: 1,
         duration: 1,
-        target: 'self'
+        target: Target.SELF
       }
     ],
     uprightEffectDesc: '获得8点护盾和2点反伤，持续2回合',
@@ -313,42 +313,42 @@ export const initialDeck: Card[] = [
     baseDamage: 7,
     effects: [
       {
-        type: 'damage',
+        type: CardEffectType.DAMAGE,
         value: 7,
-        target: 'single'
+        target: Target.SINGLE_ENEMY
       },
       {
-        type: 'weaken',
+        type: CardEffectType.WEAKEN,
         value: 1,
         duration: 1,
-        target: 'single'
+        target: Target.SINGLE_ENEMY
       }
     ],
     imageUrl: '/assets/cards/shadow_strike.png',
     uprightEffect: [
       {
-        type: 'damage',
+        type: CardEffectType.DAMAGE,
         value: 7,
-        target: 'single'
+        target: Target.SINGLE_ENEMY
       },
       {
-        type: 'weaken',
+        type: CardEffectType.WEAKEN,
         value: 1,
         duration: 1,
-        target: 'single'
+        target: Target.SINGLE_ENEMY
       }
     ],
     reversedEffect: [
       {
-        type: 'damage',
+        type: CardEffectType.DAMAGE,
         value: 5,
-        target: 'single'
+        target: Target.SINGLE_ENEMY
       },
       {
-        type: 'weaken',
+        type: CardEffectType.WEAKEN,
         value: 1,
         duration: 1,
-        target: 'single'
+        target: Target.SINGLE_ENEMY
       }
     ],
     uprightEffectDesc: '对单个目标造成7点暗影伤害并施加1回合虚弱效果',
@@ -365,39 +365,39 @@ export const initialDeck: Card[] = [
     rarity: 2,
     effects: [
       {
-        type: 'energy_drain',
+        type: CardEffectType.ENERGY_DRAIN,
         value: 1,
-        target: 'single_enemy'
+        target: Target.SINGLE_ENEMY
       },
       {
-        type: 'gain_energy',
+        type: CardEffectType.ENERGY_GAIN,
         value: 1,
-        target: 'self'
+        target: Target.SELF
       }
     ],
     imageUrl: '/assets/cards/energy_drain.png',
     uprightEffect: [
       {
-        type: 'energy_drain',
+        type: CardEffectType.ENERGY_DRAIN,
         value: 1,
-        target: 'single_enemy'
+        target: Target.SINGLE_ENEMY
       },
       {
-        type: 'gain_energy',
+        type: CardEffectType.ENERGY_GAIN,
         value: 1,
-        target: 'self'
+        target: Target.SELF
       }
     ],
     reversedEffect: [
       {
-        type: 'damage',
+        type: CardEffectType.DAMAGE,
         value: 2,
-        target: 'single'
+        target: Target.SINGLE_ENEMY
       },
       {
-        type: 'gain_energy',
+        type: CardEffectType.ENERGY_GAIN,
         value: 1,
-        target: 'self'
+        target: Target.SELF
       }
     ],
     uprightEffectDesc: '从敌人身上汲取1点能量',
@@ -414,29 +414,29 @@ export const initialDeck: Card[] = [
     rarity: 3,
     effects: [
       {
-        type: 'draw_card',
+        type: CardEffectType.DRAW_CARD,
         value: 2,
-        target: 'self'
+        target: Target.SELF
       }
     ],
     imageUrl: '/assets/cards/destiny_coin.png',
     uprightEffect: [
       {
-        type: 'draw_card',
+        type: CardEffectType.DRAW_CARD,
         value: 2,
-        target: 'self'
+        target: Target.SELF
       }
     ],
     reversedEffect: [
       {
-        type: 'return_card',
+        type: CardEffectType.RETURN_CARD,
         value: 1,
-        target: 'self'
+        target: Target.SELF
       },
       {
-        type: 'energy_gain',
+        type: CardEffectType.ENERGY_GAIN,
         value: 1,
-        target: 'self'
+        target: Target.SELF
       }
     ],
     uprightEffectDesc: '抽2张牌',
@@ -458,42 +458,42 @@ export const rareCards: Card[] = [
     baseDamage: 12,
     effects: [
       {
-        type: 'aoe_damage',
+        type: CardEffectType.AOE_DAMAGE,
         value: 12,
-        target: 'all_enemies'
+        target: Target.ALL_ENEMIES
       },
       {
-        type: 'burn',
+        type: CardEffectType.BURN,
         value: 2,
         duration: 2,
-        target: 'all_enemies'
+        target: Target.ALL_ENEMIES
       }
     ],
     imageUrl: '/assets/cards/fire_storm.png',
     uprightEffect: [
       {
-        type: 'aoe_damage',
+        type: CardEffectType.AOE_DAMAGE,
         value: 12,
-        target: 'all_enemies'
+        target: Target.ALL_ENEMIES
       },
       {
-        type: 'burn',
+        type: CardEffectType.BURN,
         value: 2,
         duration: 2,
-        target: 'all_enemies'
+        target: Target.ALL_ENEMIES
       }
     ],
     reversedEffect: [
       {
-        type: 'aoe_damage',
+        type: CardEffectType.AOE_DAMAGE,
         value: 8,
-        target: 'all_enemies'
+        target: Target.ALL_ENEMIES
       },
       {
-        type: 'obstacle',
+        type: CardEffectType.OBSTACLE,
         value: 1,
         duration: 2,
-        target: 'all_enemies'
+        target: Target.ALL_ENEMIES
       }
     ],
     uprightEffectDesc: '对所有敌人造成12点火焰伤害，并施加2回合灼烧效果',
@@ -510,34 +510,34 @@ export const rareCards: Card[] = [
     rarity: 5,
     effects: [
       {
-        type: 'extra_turn',
+        type: CardEffectType.EXTRA_TURN,
         value: 1,
-        target: 'self'
+        target: Target.SELF
       }
     ],
     imageUrl: '/assets/cards/time_warp.png',
     uprightEffect: [
       {
-        type: 'extra_turn',
+        type: CardEffectType.EXTRA_TURN,
         value: 1,
-        target: 'self'
+        target: Target.SELF
       }
     ],
     reversedEffect: [
       {
-        type: 'skip_turn',
+        type: CardEffectType.SKIP_TURN,
         value: 1,
-        target: 'self'
+        target: Target.SELF
       },
       {
-        type: 'energy_gain',
+        type: CardEffectType.ENERGY_GAIN,
         value: 3,
-        target: 'self'
+        target: Target.SELF
       },
       {
-        type: 'draw_card',
+        type: CardEffectType.DRAW_CARD,
         value: 3,
-        target: 'self'
+        target: Target.SELF
       }
     ],
     uprightEffectDesc: '获得1个额外回合',
@@ -555,42 +555,42 @@ export const rareCards: Card[] = [
     baseDamage: 8,
     effects: [
       {
-        type: 'elemental_damage',
+        type: CardEffectType.ELEMENTAL_DAMAGE,
         value: 8,
-        target: 'single'
+        target: Target.SINGLE_ENEMY
       },
       {
-        type: 'random_element_effect',
+        type: CardEffectType.RANDOM_ELEMENT_EFFECT,
         value: 1,
         duration: 2,
-        target: 'single'
+        target: Target.SINGLE_ENEMY
       }
     ],
     imageUrl: '/assets/cards/elemental_fusion.png',
     uprightEffect: [
       {
-        type: 'elemental_damage',
+        type: CardEffectType.ELEMENTAL_DAMAGE,
         value: 8,
-        target: 'single'
+        target: Target.SINGLE_ENEMY
       },
       {
-        type: 'random_element_effect',
+        type: CardEffectType.RANDOM_ELEMENT_EFFECT,
         value: 1,
         duration: 2,
-        target: 'single'
+        target: Target.SINGLE_ENEMY
       }
     ],
     reversedEffect: [
       {
-        type: 'elemental_damage',
+        type: CardEffectType.ELEMENTAL_DAMAGE,
         value: 6,
-        target: 'single'
+        target: Target.SINGLE_ENEMY
       },
       {
-        type: 'weakness_effect',
+        type: CardEffectType.WEAKNESS_EFFECT,
         value: 1,
         duration: 2,
-        target: 'single'
+        target: Target.SINGLE_ENEMY
       }
     ],
     uprightEffectDesc: '对单个目标造成8点元素伤害，并随机施加一种元素效果',

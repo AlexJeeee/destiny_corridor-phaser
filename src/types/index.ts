@@ -70,9 +70,49 @@ export interface Card {
   flipped?: boolean; // 添加flipped属性，表示卡牌是否被翻转
 }
 
+export enum CardEffectType {
+  DAMAGE = 'damage',
+  AOE_DAMAGE = 'aoe_damage',
+  ENERGY_GAIN = 'energy_gain',
+  MOVE = 'move',
+  THORNS = 'thorns',
+  ELEMENTAL_DAMAGE = 'elemental_damage',
+  RANDOM_ELEMENT_EFFECT = 'random_element_effect',
+  WEAKNESS_EFFECT = 'weakness_effect',
+  EXTRA_TURN = 'extra_turn',
+  SKIP_TURN = 'skip_turn',
+  DRAW_CARD = 'draw_card',
+  BURN = 'burn',
+  OBSTACLE = 'obstacle',
+  RETURN_CARD = 'return_card',
+  REMOVE_NEGATIVE_EFFECT = 'remove_negative_effect',
+  FREEZE = 'freeze',
+  POISON = 'poison',
+  ENERGY_DRAIN = 'energy_drain',
+  WEAKEN = 'weaken',
+  HEAL = 'heal',
+  CHAIN_DAMAGE = 'chain_damage',
+  STRENGTH = 'strength',
+  DEFENSE = 'defense',
+  VULNERABLE = 'vulnerable',
+  BOOST_ELEMENT = 'boost_element',
+  SHIELD = 'shield'
+}
+
+export enum Target {
+  SELF = 'self',
+  SINGLE_ALLY = 'single_ally',
+  ALL_ALLIES = 'all_allies',
+  SINGLE_ENEMY = 'single_enemy',
+  ALL_ENEMIES = 'all_enemies',
+  AREA = 'area',
+  ADJACENT = 'adjacent',
+  MULTI = 'multi'
+}
+
 // 卡牌效果接口
 export interface CardEffect {
-  type: string;
+  type: CardEffectType;
   value: number;
   duration?: number;
   target?: string;

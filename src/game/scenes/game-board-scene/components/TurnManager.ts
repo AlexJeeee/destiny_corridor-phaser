@@ -4,6 +4,7 @@ import { PlayerManager } from './PlayerManager';
 import { EnemyManager } from './EnemyManager';
 import { CardManager } from './CardManager';
 import { UIManager } from './UIManager';
+import { BattleSystem } from '@/game/systems/BattleSystem';
 
 export class TurnManager {
   private scene: Phaser.Scene;
@@ -12,6 +13,7 @@ export class TurnManager {
   private enemyManager: EnemyManager;
   private cardManager: CardManager;
   private uiManager: UIManager;
+  private battleSystem: BattleSystem | null = null;
   private onEnemyTurnEnd: (() => void) | null = null;
   private onPlayerTurnEnd: (() => void) | null = null;
   private onNextFloor: (() => void) | null = null;
@@ -40,6 +42,10 @@ export class TurnManager {
 
   setOnNextFloor(callback: () => void): void {
     this.onNextFloor = callback;
+  }
+
+  setBattleSystem(battleSystem: BattleSystem): void {
+    this.battleSystem = battleSystem;
   }
 
   startPlayerTurn(): void {
@@ -137,8 +143,10 @@ export class TurnManager {
           duration: 150,
           yoyo: true,
           onComplete: () => {
-            // 对玩家造成伤害
-            this.playerManager.damagePlayer(enemy.damage || 10);
+            // 使用BattleSystem对玩家造成伤害
+            if (this.battleSystem) {
+              this.battleSystem.damagePlayer(enemy.damage || 10);
+            }
             
             // 更新UI
             this.uiManager.updateInfoPanel(player);
