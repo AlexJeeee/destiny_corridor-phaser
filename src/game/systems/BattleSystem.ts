@@ -1,710 +1,92 @@
-import Phaser from 'phaser';
-import { Character, Enemy, Card, GridCoord, CardPosition, CardType, CardEffectType, CardEffect, Target } from '@/types';
-import { gridDistance } from '@/utils/battlefieldUtils';
+import { Character, Enemy, Card, CardType, CardEffect } from '@/types';
 import { PlayerManager } from '@/game/scenes/game-board-scene/components/PlayerManager';
+import { EnemyManager } from '@/game/scenes/game-board-scene/components/EnemyManager';
+import { CardManager } from '@/game/scenes/game-board-scene/components/CardManager';
+import { TurnManager } from '@/game/scenes/game-board-scene/components/TurnManager';
 
-// 战斗系统类
 export class BattleSystem {
   private scene: Phaser.Scene;
   private player: Character;
-  private enemies: Enemy[] = [];
-  private currentTurn: 'player' | 'enemy' = 'player';
-  private turnCount: number = 1;
-  private selectedCard: Card | null = null;
-  private selectedEnemy: Enemy | null = null;
-  private onTurnEnd: () => void;
-  private onBattleEnd: (victory: boolean) => void;
   private playerManager: PlayerManager;
+  private enemyManager: EnemyManager;
+  private cardManager: CardManager;
+  private turnManager: TurnManager;
+  private onBattleEnd: (() => void) | null = null;
 
   constructor(
     scene: Phaser.Scene, 
-    playerManager: PlayerManager, 
     player: Character, 
-    enemies: Enemy[], 
-    onTurnEnd: () => void, 
-    onBattleEnd: (victory: boolean) => void
+    playerManager: PlayerManager,
+    enemyManager: EnemyManager,
+    cardManager: CardManager,
+    turnManager: TurnManager
   ) {
     this.scene = scene;
     this.player = player;
-    this.enemies = enemies;
-    this.onTurnEnd = onTurnEnd;
-    this.onBattleEnd = onBattleEnd;
     this.playerManager = playerManager;
+    this.enemyManager = enemyManager;
+    this.cardManager = cardManager;
+    this.turnManager = turnManager;
+    
+    // 设置TurnManager的BattleSystem引用
+    this.turnManager.setBattleSystem(this);
   }
 
-  // 开始战斗
-  startBattle(): void {
-    console.log('战斗开始！');
-    this.drawInitialHand();
-    this.startPlayerTurn();
+  setOnBattleEnd(callback: () => void): void {
+    this.onBattleEnd = callback;
   }
 
-  // 抽取初始手牌
-  private drawInitialHand(): void {
-    // 确保玩家的手牌为空
-    this.player.hand = [];
+  // 使用卡牌攻击敌人
+  useCardOnEnemy(card: Card, enemy: Enemy): boolean {
+    console.log(`使用卡牌 ${card.name} 攻击敌人 ${enemy.name}`);
     
-    // 从牌库中抽取5张牌
-    for (let i = 0; i < 5; i++) {
-      this.drawCard();
-    }
-  }
-
-  // 从牌库抽一张牌
-  drawCard(): void {
-    if (this.player.deck.length === 0) {
-      // 如果牌库为空，将弃牌堆洗入牌库
-      this.shuffleDiscardIntoDeck();
-    }
-
-    if (this.player.deck.length > 0) {
-      const card = this.player.deck.shift();
-      if (card) {
-        this.player.hand.push(card);
-        console.log(`抽到了卡牌: ${card.name}`);
-      }
-    } else {
-      console.log('牌库和弃牌堆都为空，无法抽牌');
-    }
-  }
-
-  // 将弃牌堆洗入牌库
-  private shuffleDiscardIntoDeck(): void {
-    if (this.player.discard.length === 0) return;
-    
-    // 将弃牌堆中的牌复制到牌库中
-    this.player.deck = [...this.player.discard];
-    
-    // 清空弃牌堆
-    this.player.discard = [];
-    
-    // 洗牌
-    this.shuffleDeck();
-    
-    console.log('弃牌堆已洗入牌库');
-  }
-
-  // 洗牌
-  private shuffleDeck(): void {
-    for (let i = this.player.deck.length - 1; i > 0; i--) {
-      const j = Math.floor(Math.random() * (i + 1));
-      [this.player.deck[i], this.player.deck[j]] = [this.player.deck[j], this.player.deck[i]];
-    }
-  }
-
-  // 开始玩家回合
-  startPlayerTurn(): void {
-    this.currentTurn = 'player';
-    this.player.energy = this.player.maxEnergy;
-    
-    // 抽一张牌
-    if (this.turnCount > 1) {
-      this.drawCard();
+    // 检查能量是否足够
+    if (this.player.energy < card.cost) {
+      console.log('能量不足，无法使用卡牌');
+      return false;
     }
     
-    // 减少技能冷却时间
-    this.player.abilities.forEach(ability => {
-      if (ability.currentCooldown > 0) {
-        ability.currentCooldown--;
-      }
-    });
+    // 消耗能量
+    this.player.energy -= card.cost;
     
-    // 处理状态效果
-    this.processStatusEffects(this.player);
-    
-    console.log(`玩家回合 ${this.turnCount} 开始`);
-  }
-
-  // 结束玩家回合
-  endPlayerTurn(): void {
-    console.log('玩家回合结束');
-    this.startEnemyTurn();
-  }
-
-  // 开始敌人回合
-  startEnemyTurn(): void {
-    this.currentTurn = 'enemy';
-    console.log('敌人回合开始');
-    
-    // 处理每个敌人的行动
-    for (const enemy of this.enemies) {
-      if (enemy.health <= 0) continue;
-      
-      // 处理状态效果
-      this.processStatusEffects(enemy);
-      
-      // 减少技能冷却时间
-      enemy.abilities.forEach(ability => {
-        if (ability.currentCooldown > 0) {
-          ability.currentCooldown--;
-        }
-      });
-      
-      // 执行敌人行动
-      this.executeEnemyAction(enemy);
-    }
-    
-    // 检查战斗是否结束
-    if (this.player.health <= 0) {
-      this.endBattle(false);
-      return;
-    }
-    
-    if (this.enemies.every(enemy => enemy.health <= 0)) {
-      this.endBattle(true);
-      return;
-    }
-    
-    // 结束敌人回合，开始新的玩家回合
-    this.turnCount++;
-    this.onTurnEnd();
-    this.startPlayerTurn();
-  }
-
-  // 执行敌人行动
-  private executeEnemyAction(enemy: Enemy): void {
-    // 根据敌人的意图执行不同的行动
-    switch (enemy.intent) {
-      case 'attack':
-        this.executeEnemyAttack(enemy);
-        break;
-      case 'defend':
-        this.executeEnemyDefend(enemy);
-        break;
-      case 'buff':
-        this.executeEnemyBuff(enemy);
-        break;
-      case 'debuff':
-        this.executeEnemyDebuff(enemy);
-        break;
-      default:
-        console.log(`敌人 ${enemy.name} 没有行动`);
-    }
-    
-    // 随机更新敌人的下一个意图
-    this.updateEnemyIntent(enemy);
-  }
-
-  // 执行敌人攻击
-  private executeEnemyAttack(enemy: Enemy): void {
-    console.log(`敌人 ${enemy.name} 发动攻击`);
-    
-    // 查找可用的攻击技能
-    const attackAbility = enemy.abilities.find(ability => 
-      ability.effects.some(effect => effect.type === CardEffectType.DAMAGE) && 
-      ability.currentCooldown === 0
-    );
-
-    // 计算抵消伤害
-    const deductionValue = this.player.effects.reduce((acc, effect) => {
-      if ((effect.type === CardEffectType.DEFENSE || effect.type === CardEffectType.SHIELD) && effect.duration > 0) {
-        return acc + effect.value;
-      }
-      return acc;
-    }, 0);
-    
-    if (attackAbility) {
-      console.log(`敌人使用技能: ${attackAbility.name}`);
-      
-      // 计算伤害
-      const damageEffect = attackAbility.effects.find(effect => effect.type === CardEffectType.DAMAGE);
-      let damage = damageEffect ? damageEffect.value : enemy.damage;
-      
-      // 应用伤害到玩家
-      this.damagePlayer(damage);
-      
-      // 设置技能冷却
-      attackAbility.currentCooldown = attackAbility.cooldown;
-    } else {
-      // 使用基础攻击
-      console.log(`敌人使用基础攻击`);
-      // 应用伤害到玩家
-      this.damagePlayer(enemy.damage);
-    }
-  }
-
-  // 执行敌人防御
-  private executeEnemyDefend(enemy: Enemy): void {
-    console.log(`敌人 ${enemy.name} 进入防御状态`);
-    
-    // 添加防御效果
-    enemy.effects.push({
-      id: `defense_${Date.now()}`,
-      name: '防御',
-      description: '减少受到的伤害',
-      imageUrl: 'assets/images/effects/defense.png',
-      type: CardEffectType.DEFENSE,
-      value: Math.floor(enemy.damage * 1.5),
-      duration: 1
-    });
-  }
-
-  // 执行敌人增益
-  private executeEnemyBuff(enemy: Enemy): void {
-    console.log(`敌人 ${enemy.name} 使用增益效果`);
-    
-    // 查找可用的增益技能
-    const buffAbility = enemy.abilities.find(ability => 
-      ability.effects.some(effect => 
-        effect.type === CardEffectType.STRENGTH || 
-        effect.type === CardEffectType.DEFENSE || 
-        effect.type === CardEffectType.HEAL
-      ) && 
-      ability.currentCooldown === 0
-    );
-    
-    if (buffAbility) {
-      console.log(`敌人使用技能: ${buffAbility.name}`);
-      
-      // 应用增益效果
-      buffAbility.effects.forEach(effect => {
-        if (effect.type === CardEffectType.HEAL) {
-          // 治疗效果
-          enemy.health = Math.min(enemy.maxHealth, enemy.health + effect.value);
-          console.log(`敌人恢复了 ${effect.value} 点生命值，当前生命值: ${enemy.health}`);
-        } else {
-          // 其他增益效果
-          enemy.effects.push({
-            id: `${effect.type}_${Date.now()}`,
-            name: this.getEffectName(effect.type),
-            description: this.getEffectDescription(effect.type),
-            imageUrl: `assets/images/effects/${effect.type}.png`,
-            type: effect.type,
-            value: effect.value,
-            duration: effect.duration || 2
-          });
-          console.log(`敌人获得了 ${effect.type} 效果，持续 ${effect.duration || 2} 回合`);
-        }
-      });
-      
-      // 设置技能冷却
-      buffAbility.currentCooldown = buffAbility.cooldown;
-    } else {
-      console.log(`敌人没有可用的增益技能，改为防御`);
-      this.executeEnemyDefend(enemy);
-    }
-  }
-
-  // 执行敌人减益
-  private executeEnemyDebuff(enemy: Enemy): void {
-    console.log(`敌人 ${enemy.name} 使用减益效果`);
-    
-    // 查找可用的减益技能
-    const debuffAbility = enemy.abilities.find(ability => 
-      ability.effects.some(effect => 
-        effect.type === CardEffectType.WEAKEN || 
-        effect.type === CardEffectType.VULNERABLE || 
-        effect.type === CardEffectType.POISON
-      ) && 
-      ability.currentCooldown === 0
-    );
-    
-    if (debuffAbility) {
-      console.log(`敌人使用技能: ${debuffAbility.name}`);
-      
-      // 应用减益效果到玩家
-      debuffAbility.effects.forEach(effect => {
-        this.player.effects.push({
-          id: `${effect.type}_${Date.now()}`,
-          name: this.getEffectName(effect.type),
-          description: this.getEffectDescription(effect.type),
-          imageUrl: `assets/images/effects/${effect.type}.png`,
-          type: effect.type,
-          value: effect.value,
-          duration: effect.duration || 2
-        });
-        console.log(`玩家受到了 ${effect.type} 效果，持续 ${effect.duration || 2} 回合`);
-      });
-      
-      // 设置技能冷却
-      debuffAbility.currentCooldown = debuffAbility.cooldown;
-    } else {
-      console.log(`敌人没有可用的减益技能，改为攻击`);
-      this.executeEnemyAttack(enemy);
-    }
-  }
-
-  // 更新敌人意图
-  private updateEnemyIntent(enemy: Enemy): void {
-    const intents = ['attack', 'defend', 'buff', 'debuff'];
-    const weights = [0.6, 0.2, 0.1, 0.1]; // 权重，攻击概率更高
-    
-    let totalWeight = weights.reduce((sum, weight) => sum + weight, 0);
-    let random = Math.random() * totalWeight;
-    
-    for (let i = 0; i < weights.length; i++) {
-      if (random < weights[i]) {
-        enemy.intent = intents[i] as any;
-        break;
-      }
-      random -= weights[i];
-    }
-  }
-
-  // 处理状态效果
-  private processStatusEffects(entity: Character | Enemy): void {
-    // 复制一份效果列表，避免在遍历过程中修改原列表
-    const effects = [...entity.effects];
-    
-    // 清空原效果列表
-    entity.effects = [];
-    
-    // 处理每个效果
-    for (const effect of effects) {
-      // 减少持续时间
-      effect.duration = effect.duration ? effect.duration - 1 : 0;
-      
-      // 应用效果
-      switch (effect.type) {
-        case CardEffectType.POISON:
-          // 中毒效果，每回合造成伤害
-          const poisonDamage = effect.value;
-          entity.health = Math.max(0, entity.health - poisonDamage);
-          console.log(`${entity.name} 受到 ${poisonDamage} 点中毒伤害，剩余生命值: ${entity.health}`);
-          break;
-        case CardEffectType.DEFENSE:
-          // 防御效果在这里不需要特殊处理，只需要保留到下一回合
-          console.log(`${entity.name} 有 ${effect.value} 点护盾`);
-          break;
-        // 可以添加更多效果类型的处理
-      }
-      
-      // 如果效果还有持续时间，则保留
-      if (effect.duration > 0) {
-        entity.effects.push(effect);
+    // 应用卡牌效果
+    for (const effect of card.effects) {
+      if (effect.type === 'damage' && effect.value) {
+        // 伤害效果
+        this.damageEnemy(enemy, effect.value);
+      } else if (effect.type === 'poison' && effect.value) {
+        // 毒素效果
+        this.applyPoisonToEnemy(enemy, effect.value, effect.duration || 3);
       } else {
-        console.log(`${entity.name} 的 ${effect.type} 效果已结束`);
+        // 其他效果
+        this.applyEffectToEnemy(enemy, effect);
       }
     }
-  }
-
-  // 获取效果名称
-  private getEffectName(effectType: CardEffectType): string {
-    switch (effectType) {
-      case CardEffectType.STRENGTH: return '力量增强';
-      case CardEffectType.DEFENSE: return '防御';
-      case CardEffectType.WEAKEN: return '虚弱';
-      case CardEffectType.VULNERABLE: return '易伤';
-      case CardEffectType.POISON: return '中毒';
-      case CardEffectType.BOOST_ELEMENT: return '元素增强';
-      default: return effectType.toString();
+    
+    // 检查敌人是否死亡
+    if (enemy.health <= 0) {
+      this.handleEnemyDeath(enemy);
     }
-  }
-  
-  // 获取效果描述
-  private getEffectDescription(effectType: CardEffectType): string {
-    switch (effectType) {
-      case CardEffectType.STRENGTH: return '增加攻击伤害';
-      case CardEffectType.DEFENSE: return '减少受到的伤害';
-      case CardEffectType.WEAKEN: return '降低攻击伤害';
-      case CardEffectType.VULNERABLE: return '增加受到的伤害';
-      case CardEffectType.POISON: return '每回合受到伤害';
-      case CardEffectType.BOOST_ELEMENT: return '增强特定元素的效果';
-      default: return '状态效果';
-    }
-  }
-
-  // 使用卡牌
-  useCard(card: Card, target?: Enemy): boolean {
-    // 检查是否是玩家回合
-    if (this.currentTurn !== 'player') {
-      console.log('不是玩家回合，无法使用卡牌');
-      return false;
-    }
-    
-    // 检查能量是否足够
-    if (this.player.energy < card.cost) {
-      console.log('能量不足，无法使用卡牌');
-      return false;
-    }
-    
-    console.log(`使用卡牌: ${card.name}`);
-    
-    // 消耗能量
-    this.player.energy -= card.cost;
-    
-    // 从手牌中移除
-    const cardIndex = this.player.hand.findIndex(c => c.id === card.id);
-    if (cardIndex !== -1) {
-      this.player.hand.splice(cardIndex, 1);
-    }
-    
-    // 应用卡牌效果
-    this.applyCardEffects(card, target);
-    
-    // 将卡牌放入弃牌堆
-    this.player.discard.push(card);
     
     return true;
-  }
-
-  // 对自己使用卡牌（治疗或防御）
-  useCardOnSelf(card: Card): boolean {
-    // 检查是否是玩家回合
-    if (this.currentTurn !== 'player') {
-      console.log('不是玩家回合，无法使用卡牌');
-      return false;
-    }
-    
-    // 检查能量是否足够
-    if (this.player.energy < card.cost) {
-      console.log('能量不足，无法使用卡牌');
-      return false;
-    }
-    
-    console.log(`对自己使用卡牌: ${card.name}`);
-    
-    // 消耗能量
-    this.player.energy -= card.cost;
-    
-    // 从手牌中移除
-    const cardIndex = this.player.hand.findIndex(c => c.id === card.id);
-    if (cardIndex !== -1) {
-      this.player.hand.splice(cardIndex, 1);
-    }
-    
-    // 根据卡牌的正逆位状态应用不同效果
-    const isUpright = card.position === CardPosition.UPRIGHT;
-    
-    // 获取对应的效果
-    const effects = isUpright ? card.uprightEffect : card.reversedEffect;
-    console.log(`应用${isUpright ? '正位' : '逆位'}效果`);
-    
-    // 应用卡牌效果
-    for (const effect of effects) {
-      if (effect.type === CardEffectType.HEAL) {
-        this.applyHealEffect(effect);
-      } else if (effect.type === CardEffectType.DEFENSE) {
-        this.applyDefenseEffect(effect);
-      }
-      // 其他可能的自我效果
-    }
-    
-    // 将卡牌放入弃牌堆
-    this.player.discard.push(card);
-    
-    return true;
-  }
-
-  // 应用卡牌效果
-  private applyCardEffects(card: Card, target?: Enemy): void {
-    // 根据卡牌的正逆位状态应用不同效果
-    const isUpright = card.position === CardPosition.UPRIGHT;
-    
-    // 获取对应的效果
-    const effects = isUpright ? card.uprightEffect : card.reversedEffect;
-    console.log(`应用${isUpright ? '正位' : '逆位'}效果`);
-    
-    // 应用卡牌效果
-    for (const effect of effects) {
-      switch (effect.type) {
-        case CardEffectType.DAMAGE:
-          this.applyDamageEffect(effect, target, card);
-          break;
-        case CardEffectType.HEAL:
-          this.applyHealEffect(effect);
-          break;
-        case CardEffectType.DEFENSE:
-          this.applyDefenseEffect(effect);
-          break;
-        case CardEffectType.DRAW_CARD:
-          this.applyDrawEffect(effect);
-          break;
-        case CardEffectType.ENERGY_GAIN:
-          this.applyEnergyEffect(effect);
-          break;
-        case CardEffectType.AOE_DAMAGE:
-          this.applyAoeDamageEffect(effect, target, card);
-          break;
-        // 可以添加更多效果类型的处理
-      }
-    }
-  }
-
-  // 应用治疗效果
-  private applyHealEffect(effect: any): void {
-    const healAmount = effect.value;
-    
-    if (effect.target === 'self' || effect.target === 'single_ally') {
-      this.player.health = Math.min(this.player.maxHealth, this.player.health + healAmount);
-      console.log(`玩家恢复了 ${healAmount} 点生命值，当前生命值: ${this.player.health}`);
-    } else if (effect.target === 'all_allies') {
-      // 如果有队友系统，可以在这里添加对所有队友的治疗
-      this.player.health = Math.min(this.player.maxHealth, this.player.health + healAmount);
-      console.log(`所有友方单位恢复了 ${healAmount} 点生命值`);
-    }
-  }
-
-  // 应用防御效果
-  private applyDefenseEffect(effect: CardEffect): void {
-    const blockAmount = effect.value;
-    
-    if (effect.target === Target.SELF) {
-      // 添加防御效果到玩家
-      this.player.effects.push({
-        id: `defense_${Date.now()}`,
-        name: '护盾',
-        description: '减少受到的伤害',
-        imageUrl: 'assets/images/effects/block.png',
-        type: CardEffectType.DEFENSE,
-        value: blockAmount,
-        duration: 1 // 防御效果通常持续到下一回合
-      });
-      console.log(`玩家获得了 ${blockAmount} 点护盾`);
-    } else if (effect.target === Target.SINGLE_ALLY) {
-      // 如果有队友系统，可以在这里添加对特定队友的防御
-      this.player.effects.push({
-        id: `defense_${Date.now()}`,
-        name: '护盾',
-        description: '减少受到的伤害',
-        imageUrl: 'assets/images/effects/block.png',
-        type: CardEffectType.DEFENSE,
-        value: blockAmount,
-        duration: 1
-      });
-      console.log(`目标友方单位获得了 ${blockAmount} 点护盾`);
-    }
-  }
-
-  // 应用抽牌效果
-  private applyDrawEffect(effect: any): void {
-    const drawCount = effect.value;
-    for (let i = 0; i < drawCount; i++) {
-      this.drawCard();
-    }
-  }
-
-  // 应用能量效果
-  private applyEnergyEffect(effect: any): void {
-    const energyAmount = effect.value;
-    this.player.energy += energyAmount;
-    console.log(`玩家获得了 ${energyAmount} 点能量，当前能量: ${this.player.energy}`);
-  }
-
-  // 应用范围伤害效果
-  private applyAoeDamageEffect(effect: any, target?: Enemy, card?: Card): void {
-    if (!target && effect.target !== 'all') {
-      console.log('需要选择目标敌人');
-      return;
-    }
-    
-    let damage = effect.value;
-    
-    // 应用元素加成
-    if (card && this.player.effects.some(e => e.type === CardEffectType.BOOST_ELEMENT && e.target === card.element)) {
-      const boost = this.player.effects.find(e => e.type === CardEffectType.BOOST_ELEMENT && e.target === card.element);
-      if (boost) {
-        damage = Math.floor(damage * (1 + boost.value));
-        console.log(`元素加成: 伤害提升至 ${damage}`);
-      }
-    }
-    
-    if (effect.target === 'all') {
-      // 对所有敌人造成伤害
-      for (const enemy of this.enemies) {
-        if (enemy.health > 0) {
-          this.damageEnemy(enemy, damage);
-        }
-      }
-    } else if (effect.target === 'adjacent' && target) {
-      // 对目标周围敌人造成伤害
-      for (const enemy of this.enemies) {
-        if (enemy.health > 0 && enemy.id !== target.id) {
-          const distance = gridDistance(enemy.position, target.position);
-          if (distance <= 1) { // 相邻距离为1
-            this.damageEnemy(enemy, damage);
-          }
-        }
-      }
-    }
-  }
-
-  // 应用伤害效果
-  private applyDamageEffect(effect: any, target?: Enemy, card?: Card): void {
-    if (!target && effect.target === 'single') {
-      console.log('需要选择目标敌人');
-      return;
-    }
-    
-    let damage = effect.value;
-    
-    // 应用元素加成
-    if (card && this.player.effects.some(e => e.type === CardEffectType.BOOST_ELEMENT && e.target === card.element)) {
-      const boost = this.player.effects.find(e => e.type === CardEffectType.BOOST_ELEMENT && e.target === card.element);
-      if (boost) {
-        damage = Math.floor(damage * (1 + boost.value));
-        console.log(`元素加成: 伤害提升至 ${damage}`);
-      }
-    }
-    
-    if (effect.target === 'single' && target) {
-      this.damageEnemy(target, damage);
-    } else if (effect.target === 'all') {
-      // 对所有敌人造成伤害
-      for (const enemy of this.enemies) {
-        if (enemy.health > 0) {
-          this.damageEnemy(enemy, damage);
-        }
-      }
-    } else if (effect.target === 'area' && target) {
-      // 对目标及其周围敌人造成伤害
-      for (const enemy of this.enemies) {
-        if (enemy.health > 0) {
-          const distance = gridDistance(enemy.position, target.position);
-          if (distance <= (effect.radius || 1)) {
-            let enemyDamage = distance === 0 ? damage : Math.floor(damage / 2);
-            this.damageEnemy(enemy, enemyDamage);
-          }
-        }
-      }
-    }
-  }
-
-  // 对玩家造成伤害
-  public damagePlayer(damage: number): void {
-    // 计算抵消伤害
-    const deductionValue = this.player.effects.reduce((acc, effect) => {
-      if ((effect.type === CardEffectType.DEFENSE || effect.type === CardEffectType.SHIELD) && effect.duration > 0) {
-        return acc + effect.value;
-      }
-      return acc;
-    }, 0);
-
-    console.log(`抵消伤害: ${deductionValue}`, this.player.effects);
-    
-    const actualDamage = Math.max(0, damage - deductionValue);
-    
-    // 应用伤害到玩家
-    this.player.health = Math.max(0, this.player.health - actualDamage);
-    
-    console.log(`玩家受到 ${actualDamage} 点伤害，剩余生命值: ${this.player.health}`);
-    // 显示伤害视觉效果
-    this.playerManager.damagePlayer(actualDamage);
-    
-    // 检查玩家是否死亡
-    if (this.player.health <= 0) {
-      this.endBattle(false);
-    }
   }
 
   // 对敌人造成伤害
-  public damageEnemy(enemy: Enemy, damage: number): void {
-    if (!enemy || enemy.health <= 0) return;
-    
-    // 检查目标是否有防御效果
-    const blockEffect = enemy.effects.find(e => e.type === CardEffectType.DEFENSE);
+  damageEnemy(enemy: Enemy, damage: number): void {
+    // 检查敌人是否有防御效果
+    const blockEffect = enemy.effects.find(e => e.type === 'defense' || e.type === 'shield');
     let actualDamage = damage;
     
     if (blockEffect) {
       if (blockEffect.value >= actualDamage) {
         // 防御完全抵消伤害
         blockEffect.value -= actualDamage;
-        console.log(`${enemy.name} 的护盾抵消了 ${actualDamage} 点伤害，剩余护盾: ${blockEffect.value}`);
+        console.log(`敌人的护盾抵消了 ${actualDamage} 点伤害，剩余护盾: ${blockEffect.value}`);
         actualDamage = 0;
       } else {
         // 防御部分抵消伤害
         actualDamage -= blockEffect.value;
-        console.log(`${enemy.name} 的护盾抵消了 ${blockEffect.value} 点伤害，剩余伤害: ${actualDamage}`);
+        console.log(`敌人的护盾抵消了 ${blockEffect.value} 点伤害，剩余伤害: ${actualDamage}`);
         blockEffect.value = 0;
       }
     }
@@ -712,78 +94,200 @@ export class BattleSystem {
     // 对敌人造成伤害
     if (actualDamage > 0) {
       enemy.health = Math.max(0, enemy.health - actualDamage);
-      console.log(`对 ${enemy.name} 造成 ${actualDamage} 点伤害，剩余生命值: ${enemy.health}`);
+      console.log(`敌人 ${enemy.name} 受到 ${actualDamage} 点伤害，剩余生命值: ${enemy.health}`);
       
-      // 检查敌人是否死亡
-      if (enemy.health <= 0) {
-        console.log(`敌人 ${enemy.name} 已被击败`);
+      // 显示伤害数字
+      const enemySprite = this.enemyManager.getEnemySprites().get(enemy.id);
+      if (enemySprite) {
+        const damageText = this.scene.add.text(enemySprite.x, enemySprite.y - 20, `-${actualDamage}`, {
+          fontFamily: 'Arial',
+          fontSize: '24px',
+          color: '#ff0000'
+        }).setOrigin(0.5);
+        
+        this.scene.tweens.add({
+          targets: damageText,
+          y: damageText.y - 40,
+          alpha: 0,
+          duration: 1000,
+          onComplete: () => damageText.destroy()
+        });
       }
     }
   }
 
-  // 结束战斗
-  endBattle(victory: boolean): void {
-    console.log(`战斗${victory ? '胜利' : '失败'}！`);
-    this.onBattleEnd(victory);
+  // 对玩家造成伤害
+  damagePlayer(damage: number): void {
+    this.playerManager.damagePlayer(damage);
   }
 
-  // 获取当前回合
-  getCurrentTurn(): 'player' | 'enemy' {
-    return this.currentTurn;
-  }
-
-  // 获取当前回合数
-  getTurnCount(): number {
-    return this.turnCount;
-  }
-
-  // 获取玩家
-  getPlayer(): Character {
-    return this.player;
-  }
-
-  // 获取敌人列表
-  getEnemies(): Enemy[] {
-    return this.enemies;
-  }
-
-  // 选择卡牌
-  selectCard(card: Card): void {
-    this.selectedCard = card;
-    console.log(`选择了卡牌: ${card.name}`);
-  }
-
-  // 取消选择卡牌
-  deselectCard(): void {
-    this.selectedCard = null;
-    console.log('取消选择卡牌');
-  }
-
-  // 获取选中的卡牌
-  getSelectedCard(): Card | null {
-    return this.selectedCard;
-  }
-
-  // 选择敌人
-  selectEnemy(enemy: Enemy): void {
-    this.selectedEnemy = enemy;
-    console.log(`选择了敌人: ${enemy.name}`);
+  // 应用毒素效果到敌人
+  applyPoisonToEnemy(enemy: Enemy, value: number, duration: number): void {
+    // 查找现有的毒素效果
+    const existingPoison = enemy.effects.find(e => e.type === 'poison');
     
-    // 如果已经选择了卡牌，则自动使用
-    if (this.selectedCard) {
-      this.useCard(this.selectedCard, enemy);
-      this.selectedCard = null;
+    if (existingPoison) {
+      // 增加现有毒素效果的值
+      existingPoison.value += value;
+      // 更新持续时间为较大的值
+      existingPoison.duration = Math.max(existingPoison.duration || 0, duration);
+      console.log(`增加敌人毒素效果，当前毒素值: ${existingPoison.value}，持续回合: ${existingPoison.duration}`);
+    } else {
+      // 添加新的毒素效果
+      enemy.effects.push({
+        id: `poison-${Date.now()}`,
+        name: '毒素',
+        description: '每回合受到伤害',
+        type: 'poison',
+        value: value,
+        duration: duration,
+        imageUrl: ''
+      });
+      console.log(`添加敌人毒素效果，毒素值: ${value}，持续回合: ${duration}`);
+    }
+    
+    // 显示毒素效果
+    const enemySprite = this.enemyManager.getEnemySprites().get(enemy.id);
+    if (enemySprite) {
+      const poisonText = this.scene.add.text(enemySprite.x, enemySprite.y - 20, `+${value} 毒素`, {
+        fontFamily: 'Arial',
+        fontSize: '18px',
+        color: '#00ff00'
+      }).setOrigin(0.5);
+      
+      this.scene.tweens.add({
+        targets: poisonText,
+        y: poisonText.y - 40,
+        alpha: 0,
+        duration: 1000,
+        onComplete: () => poisonText.destroy()
+      });
     }
   }
 
-  // 取消选择敌人
-  deselectEnemy(): void {
-    this.selectedEnemy = null;
-    console.log('取消选择敌人');
+  // 应用效果到敌人
+  applyEffectToEnemy(enemy: Enemy, effect: CardEffect): void {
+    // 查找现有的同类效果
+    const existingEffectIndex = enemy.effects.findIndex(e => e.type === effect.type);
+    
+    if (existingEffectIndex !== -1) {
+      // 更新现有效果
+      const existingEffect = enemy.effects[existingEffectIndex];
+      existingEffect.value = (existingEffect.value || 0) + (effect.value || 0);
+      
+      // 更新持续时间为较大的值
+      if (effect.duration !== undefined && existingEffect.duration !== undefined) {
+        existingEffect.duration = Math.max(existingEffect.duration, effect.duration);
+      } else if (effect.duration !== undefined) {
+        existingEffect.duration = effect.duration;
+      }
+      
+      console.log(`更新敌人效果 ${effect.type}，当前值: ${existingEffect.value}，持续回合: ${existingEffect.duration}`);
+    } else {
+      // 添加新效果
+      enemy.effects.push({
+        id: `${effect.type}-${Date.now()}`,
+        name: this.getEffectName(effect.type),
+        description: this.getEffectDescription(effect.type),
+        type: effect.type,
+        value: effect.value || 0,
+        duration: effect.duration || 1,
+        imageUrl: ''
+      });
+      
+      console.log(`添加敌人效果 ${effect.type}，值: ${effect.value}，持续回合: ${effect.duration}`);
+    }
+    
+    // 显示效果文本
+    const enemySprite = this.enemyManager.getEnemySprites().get(enemy.id);
+    if (enemySprite) {
+      const effectText = this.scene.add.text(enemySprite.x, enemySprite.y - 20, `+${this.getEffectName(effect.type)}`, {
+        fontFamily: 'Arial',
+        fontSize: '18px',
+        color: '#ffcc00'
+      }).setOrigin(0.5);
+      
+      this.scene.tweens.add({
+        targets: effectText,
+        y: effectText.y - 40,
+        alpha: 0,
+        duration: 1000,
+        onComplete: () => effectText.destroy()
+      });
+    }
   }
 
-  // 获取选中的敌人
-  getSelectedEnemy(): Enemy | null {
-    return this.selectedEnemy;
+  // 处理敌人死亡
+  handleEnemyDeath(enemy: Enemy): void {
+    console.log(`敌人 ${enemy.name} 已死亡`);
+    
+    // 移除敌人精灵
+    this.enemyManager.removeEnemy(enemy);
+    
+    // 检查是否所有敌人都已死亡
+    if (this.turnManager.checkEnemiesDefeated()) {
+      console.log('所有敌人已被击败');
+      
+      // 战斗结束
+      if (this.onBattleEnd) {
+        this.onBattleEnd();
+      }
+    }
+  }
+
+  // 获取效果名称
+  private getEffectName(effectType: string): string {
+    switch (effectType) {
+      case 'damage':
+        return '伤害';
+      case 'heal':
+        return '治疗';
+      case 'defense':
+        return '防御';
+      case 'poison':
+        return '毒素';
+      case 'draw_card':
+        return '抽牌';
+      case 'energy_gain':
+        return '能量';
+      case 'shield':
+        return '护盾';
+      case 'strength':
+        return '力量';
+      case 'vulnerable':
+        return '易伤';
+      case 'weaken':
+        return '虚弱';
+      default:
+        return '未知效果';
+    }
+  }
+
+  // 获取效果描述
+  private getEffectDescription(effectType: string): string {
+    switch (effectType) {
+      case 'damage':
+        return '造成伤害';
+      case 'heal':
+        return '恢复生命值';
+      case 'defense':
+        return '减少受到的伤害';
+      case 'poison':
+        return '每回合受到伤害';
+      case 'draw_card':
+        return '抽取卡牌';
+      case 'energy_gain':
+        return '获得能量';
+      case 'shield':
+        return '获得护盾';
+      case 'strength':
+        return '增加攻击力';
+      case 'vulnerable':
+        return '受到的伤害增加';
+      case 'weaken':
+        return '造成的伤害减少';
+      default:
+        return '未知效果';
+    }
   }
 }

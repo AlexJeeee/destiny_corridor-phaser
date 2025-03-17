@@ -146,11 +146,11 @@ export class GameBoardScene extends BaseScene {
     if (this.player) {
       this.battleSystem = new BattleSystem(
         this,
-        this.playerManager,
         this.player,
-        this.enemyManager.getEnemies(),
-        () => { /* 回合结束回调 */ },
-        (victory: boolean) => { /* 战斗结束回调 */ }
+        this.playerManager,
+        this.enemyManager,
+        this.cardManager,
+        this.turnManager
       );
       
       // 设置TurnManager的BattleSystem引用
@@ -309,8 +309,8 @@ export class GameBoardScene extends BaseScene {
         if (isPlayerPosition && this.player && this.battleSystem) {
           console.log(`对自身使用卡牌: ${selectedCard.name}`);
           
-          // 使用战斗系统的useCardOnSelf方法应用卡牌效果
-          this.battleSystem.useCardOnSelf(selectedCard);
+          // 使用PlayerManager的useCardOnSelf方法应用卡牌效果
+          this.playerManager.useCardOnSelf(selectedCard);
           
           // 使用卡牌
           this.cardManager.playCard(selectedCard, this.player);

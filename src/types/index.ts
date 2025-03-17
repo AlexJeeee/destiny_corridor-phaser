@@ -180,7 +180,7 @@ export interface StatusEffect {
   description: string;
   duration: number;
   value: number;
-  type: string;
+  type: CardEffectType;
   imageUrl: string;
   target?: string; // 添加可选的 target 属性，用于指定效果的目标（如元素类型）
 }

@@ -1,5 +1,5 @@
 import Phaser from 'phaser';
-import { Character, Enemy, GridCoord } from '@/types';
+import { Character, Enemy, GridCoord, CardEffectType } from '@/types';
 import { PlayerManager } from './PlayerManager';
 import { EnemyManager } from './EnemyManager';
 import { CardManager } from './CardManager';
@@ -17,6 +17,7 @@ export class TurnManager {
   private onEnemyTurnEnd: (() => void) | null = null;
   private onPlayerTurnEnd: (() => void) | null = null;
   private onNextFloor: (() => void) | null = null;
+  private turnCount: number = 1;
 
   constructor(
     scene: Phaser.Scene, 
@@ -55,17 +56,32 @@ export class TurnManager {
     // 更新回合文本
     this.uiManager.updateTurnText(true);
     
-    // 恢复玩家能量
+    // 获取玩家
     const player = this.playerManager.getPlayer();
-    if (player) {
-      player.energy = player.maxEnergy;
-      this.uiManager.updateInfoPanel(player);
-    }
+    if (!player) return;
+    
+    // 恢复玩家能量
+    player.energy = player.maxEnergy;
+    
+    // 处理玩家状态效果
+    this.processStatusEffects(player);
+    
+    // 更新UI
+    this.uiManager.updateInfoPanel(player);
     
     // 抽取卡牌
-    if (player) {
+    if (this.turnCount > 1) {
       this.cardManager.drawCards(player, 1);
     }
+    
+    // 减少技能冷却时间
+    player.abilities.forEach(ability => {
+      if (ability.currentCooldown > 0) {
+        ability.currentCooldown--;
+      }
+    });
+    
+    console.log(`玩家回合 ${this.turnCount} 开始`);
   }
 
   endPlayerTurn(): void {
@@ -85,16 +101,30 @@ export class TurnManager {
     if (this.onPlayerTurnEnd) {
       this.onPlayerTurnEnd();
     }
+    
+    console.log('玩家回合结束');
   }
 
   enemyActions(): void {
     // 实现敌人AI行动
-    console.log('敌人行动');
+    console.log('敌人回合开始');
     
     const enemies = this.enemyManager.getEnemies();
     
     // 依次执行每个敌人的行动
     enemies.forEach((enemy, index) => {
+      if (enemy.health <= 0) return;
+      
+      // 处理敌人状态效果
+      this.processStatusEffects(enemy);
+      
+      // 减少技能冷却时间
+      enemy.abilities.forEach(ability => {
+        if (ability.currentCooldown > 0) {
+          ability.currentCooldown--;
+        }
+      });
+      
       // 延迟执行，让敌人依次行动
       this.scene.time.delayedCall(index * 800, () => {
         this.performEnemyAction(enemy);
@@ -184,6 +214,9 @@ export class TurnManager {
   }
 
   endEnemyTurn(): void {
+    // 增加回合计数
+    this.turnCount++;
+    
     // 开始新的玩家回合
     this.startPlayerTurn();
     
@@ -214,8 +247,66 @@ export class TurnManager {
     return this.currentTurn;
   }
 
+  getTurnCount(): number {
+    return this.turnCount;
+  }
+
   private getGridDistance(a: GridCoord, b: GridCoord): number {
     // 计算两个坐标之间的距离
     return Math.abs(a.x - b.x) + Math.abs(a.y - b.y);
+  }
+
+  // 处理状态效果
+  private processStatusEffects(entity: Character | Enemy): void {
+    if (!entity.effects) return;
+    
+    const effects = [...entity.effects];
+    
+    for (const effect of effects) {
+      // 减少效果持续时间
+      if (effect.duration !== undefined && effect.duration > 0) {
+        effect.duration--;
+      }
+      
+      // 应用效果
+      if (effect.type === 'poison' && effect.value) {
+        // 毒素效果：造成伤害
+        if (entity.health) {
+          entity.health = Math.max(0, entity.health - effect.value);
+          console.log(`${entity.name} 受到毒素效果，失去 ${effect.value} 点生命值，剩余 ${entity.health}`);
+        }
+      }
+      
+      // 移除已过期的效果
+      if (effect.duration !== undefined && effect.duration <= 0) {
+        const index = entity.effects.indexOf(effect);
+        if (index !== -1) {
+          entity.effects.splice(index, 1);
+          console.log(`${entity.name} 的 ${this.getEffectName(effect.type)} 效果已过期`);
+        }
+      }
+    }
+  }
+
+  // 获取效果名称
+  private getEffectName(effectType: CardEffectType): string {
+    switch (effectType) {
+      case CardEffectType.DAMAGE:
+        return '伤害';
+      case CardEffectType.HEAL:
+        return '治疗';
+      case CardEffectType.DEFENSE:
+        return '防御';
+      case CardEffectType.POISON:
+        return '毒素';
+      case CardEffectType.DRAW_CARD:
+        return '抽牌';
+      case CardEffectType.ENERGY_GAIN:
+        return '能量';
+      case CardEffectType.SHIELD:
+        return '护盾';
+      default:
+        return '未知效果';
+    }
   }
 }
