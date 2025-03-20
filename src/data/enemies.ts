@@ -1,4 +1,4 @@
-import { Enemy, GridCoord } from '../types'
+import { Enemy, GridCoord, CardEffectType, AbilityEffectType } from '../types'
 
 // 初始敌人数据
 export const initialEnemies: Enemy[] = [
@@ -18,17 +18,20 @@ export const initialEnemies: Enemy[] = [
         description: '发射一个小火球',
         cooldown: 2,
         currentCooldown: 0,
-        cost: 0,
+        cost: 1,
+        isPassive: true,
         effects: [
           {
-            type: 'damage',
-            value: 5,
+            type: AbilityEffectType.DAMAGE,
+            value: 8,
             target: 'player'
           }
         ]
       }
     ],
-    imageUrl: '/assets/enemies/fire_imp.png'
+    imageUrl: '/assets/enemies/fire_imp.png',
+    moveRange: 1,
+    attackRange: 1
   },
   {
     id: 'enemy_002',
@@ -46,23 +49,26 @@ export const initialEnemies: Enemy[] = [
         description: '释放冰霜新星，对周围敌人造成伤害并减速',
         cooldown: 3,
         currentCooldown: 0,
-        cost: 0,
+        cost: 2,
+        isPassive: true,
         effects: [
           {
-            type: 'aoe_damage',
+            type: AbilityEffectType.AOE_DAMAGE,
             value: 4,
-            target: 'aoe_1'
+            range: 1
           },
           {
-            type: 'slow',
+            type: AbilityEffectType.SLOW,
             value: 1,
             duration: 1,
-            target: 'aoe_1'
+            range: 1
           }
         ]
       }
     ],
-    imageUrl: '/assets/enemies/frost_troll.png'
+    imageUrl: '/assets/enemies/frost_troll.png',
+    moveRange: 1,
+    attackRange: 1
   },
   {
     id: 'enemy_003',
@@ -80,15 +86,16 @@ export const initialEnemies: Enemy[] = [
         description: '突袭玩家，造成伤害并使其虚弱',
         cooldown: 2,
         currentCooldown: 0,
-        cost: 0,
+        cost: 2,
+        isPassive: true,
         effects: [
           {
-            type: 'damage',
+            type: AbilityEffectType.DAMAGE,
             value: 8,
             target: 'player'
           },
           {
-            type: 'weaken',
+            type: AbilityEffectType.WEAKEN,
             value: 1,
             duration: 1,
             target: 'player'
@@ -96,7 +103,9 @@ export const initialEnemies: Enemy[] = [
         ]
       }
     ],
-    imageUrl: '/assets/enemies/shadow_assassin.png'
+    imageUrl: '/assets/enemies/shadow_assassin.png',
+    moveRange: 3,
+    attackRange: 1
   }
 ]
 
@@ -118,23 +127,26 @@ export const eliteEnemies: Enemy[] = [
         description: '释放烈焰风暴，对所有敌人造成伤害',
         cooldown: 3,
         currentCooldown: 0,
-        cost: 0,
+        cost: 2,
+        isPassive: true,
         effects: [
           {
-            type: 'aoe_damage',
+            type: AbilityEffectType.AOE_DAMAGE,
             value: 8,
-            target: 'all'
+            range: 'all'
           },
           {
-            type: 'burn',
+            type: AbilityEffectType.BURN,
             value: 2,
             duration: 2,
-            target: 'all'
+            range: 'all'
           }
         ]
       }
     ],
-    imageUrl: '/assets/enemies/fire_elemental.png'
+    imageUrl: '/assets/enemies/fire_elemental.png',
+    moveRange: 2,
+    attackRange: 2
   },
   {
     id: 'elite_002',
@@ -152,15 +164,16 @@ export const eliteEnemies: Enemy[] = [
         description: '对玩家造成大量伤害并使其眩晕',
         cooldown: 4,
         currentCooldown: 0,
-        cost: 0,
+        cost: 2,
+        isPassive: true,
         effects: [
           {
-            type: 'damage',
+            type: AbilityEffectType.DAMAGE,
             value: 15,
             target: 'player'
           },
           {
-            type: 'stun',
+            type: AbilityEffectType.STUN,
             value: 1,
             duration: 1,
             target: 'player'
@@ -168,7 +181,9 @@ export const eliteEnemies: Enemy[] = [
         ]
       }
     ],
-    imageUrl: '/assets/enemies/thunder_beast.png'
+    imageUrl: '/assets/enemies/thunder_beast.png',
+    moveRange: 2,
+    attackRange: 2
   }
 ]
 
@@ -190,10 +205,11 @@ export const bossEnemies: Enemy[] = [
         description: '扭曲命运，随机改变所有卡牌的位置',
         cooldown: 3,
         currentCooldown: 0,
-        cost: 0,
+        cost: 2,
+        isPassive: true,
         effects: [
           {
-            type: 'flip_all_cards',
+            type: AbilityEffectType.FLIP_ALL_CARDS,
             value: 1,
             target: 'all_cards'
           }
@@ -205,17 +221,20 @@ export const bossEnemies: Enemy[] = [
         description: '对玩家造成巨大伤害',
         cooldown: 5,
         currentCooldown: 0,
-        cost: 0,
+        cost: 2,
+        isPassive: true,
         effects: [
           {
-            type: 'damage',
+            type: AbilityEffectType.DAMAGE,
             value: 25,
             target: 'player'
           }
         ]
       }
     ],
-    imageUrl: '/assets/enemies/destiny_guardian.png'
+    imageUrl: '/assets/enemies/destiny_guardian.png',
+    moveRange: 3,
+    attackRange: 3
   }
 ]
 

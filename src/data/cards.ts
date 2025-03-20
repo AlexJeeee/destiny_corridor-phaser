@@ -11,7 +11,7 @@ export const initialDeck: Card[] = [
     element: ElementType.FIRE,
     cost: 1,
     rarity: 1,
-    baseDamage: 6,
+    baseDamage: 66,
     effects: [
       {
         type: CardEffectType.DAMAGE,

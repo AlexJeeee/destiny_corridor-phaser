@@ -225,10 +225,9 @@ export class GameBoardScene extends BaseScene {
 
   private handleGridClick(coord: GridCoord): void {
     console.log(`点击了格子: ${coord.x},${coord.y}`);
-    
+    const selectedCard = this.cardManager.getSelectedCard();
     // 如果是玩家回合且选中了卡牌
-    if (this.turnManager.getCurrentTurn() === 'player' && this.cardManager.getSelectedCard()) {
-      const selectedCard = this.cardManager.getSelectedCard();
+    if (this.turnManager.getCurrentTurn() === 'player' && selectedCard) {
       
       // 检查是否是有效的移动位置
       const playerPos = this.playerManager.getPlayerPosition();
@@ -267,7 +266,7 @@ export class GameBoardScene extends BaseScene {
         
         if (clickedEnemy && this.battleSystem) {
           // 使用BattleSystem攻击敌人
-          const damage = selectedCard.baseDamage || 1; // 如果卡牌没有伤害值，默认为1
+          const damage = selectedCard.baseDamage || 0; // 如果卡牌没有伤害值，默认为0
           this.battleSystem.damageEnemy(clickedEnemy, damage);
           
           // 显示视觉效果

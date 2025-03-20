@@ -1,6 +1,7 @@
 import Phaser from 'phaser';
 import { Character, GridCoord, Card, CardEffect, CardEffectType } from '@/types';
 import { BattlefieldManager } from './BattlefieldManager';
+import { getEffectName, getEffectDescription } from '@/utils';
 
 export class PlayerManager {
   private scene: Phaser.Scene;
@@ -218,8 +219,8 @@ export class PlayerManager {
       // 添加新效果
       this.player.effects.push({
         id: `${effect.type}-${Date.now()}`,
-        name: this.getEffectName(effect.type),
-        description: this.getEffectDescription(effect.type),
+        name: getEffectName(effect.type),
+        description: getEffectDescription(effect.type),
         type: effect.type,
         value: effect.value || 0,
         duration: effect.duration || 1,
@@ -232,7 +233,7 @@ export class PlayerManager {
     
     // 显示效果文本
     if (this.playerSprite) {
-      const effectText = this.scene.add.text(this.playerSprite.x, this.playerSprite.y - 20, `+${this.getEffectName(effect.type)}`, {
+      const effectText = this.scene.add.text(this.playerSprite.x, this.playerSprite.y - 20, `+${getEffectName(effect.type)}`, {
         fontFamily: 'Arial',
         fontSize: '18px',
         color: '#ffcc00'
@@ -298,61 +299,5 @@ export class PlayerManager {
 
   getPlayerPosition(): GridCoord | null {
     return this.player ? this.player.position : null;
-  }
-
-  // 获取效果名称
-  private getEffectName(effectType: string): string {
-    switch (effectType) {
-      case 'damage':
-        return '伤害';
-      case 'heal':
-        return '治疗';
-      case 'defense':
-        return '防御';
-      case 'poison':
-        return '毒素';
-      case 'draw_card':
-        return '抽牌';
-      case 'energy_gain':
-        return '能量';
-      case 'shield':
-        return '护盾';
-      case 'strength':
-        return '力量';
-      case 'vulnerable':
-        return '易伤';
-      case 'weaken':
-        return '虚弱';
-      default:
-        return '未知效果';
-    }
-  }
-
-  // 获取效果描述
-  private getEffectDescription(effectType: string): string {
-    switch (effectType) {
-      case 'damage':
-        return '造成伤害';
-      case 'heal':
-        return '恢复生命值';
-      case 'defense':
-        return '减少受到的伤害';
-      case 'poison':
-        return '每回合受到伤害';
-      case 'draw_card':
-        return '抽取卡牌';
-      case 'energy_gain':
-        return '获得能量';
-      case 'shield':
-        return '获得护盾';
-      case 'strength':
-        return '增加攻击力';
-      case 'vulnerable':
-        return '受到的伤害增加';
-      case 'weaken':
-        return '造成的伤害减少';
-      default:
-        return '未知效果';
-    }
   }
 }

@@ -5,6 +5,7 @@ import { EnemyManager } from './EnemyManager';
 import { CardManager } from './CardManager';
 import { UIManager } from './UIManager';
 import { BattleSystem } from '@/game/systems/BattleSystem';
+import { getEffectName } from '@/utils';
 
 export class TurnManager {
   private scene: Phaser.Scene;
@@ -149,7 +150,7 @@ export class TurnManager {
     const enemySprite = this.enemyManager.getEnemySprites().get(enemy.id);
     if (!enemySprite) return;
     
-    if (distance <= 1) {
+    if (distance <= enemy.attackRange) {
       // 如果在攻击范围内，执行攻击
       console.log(`敌人 ${enemy.name} 攻击玩家`);
       
@@ -175,7 +176,7 @@ export class TurnManager {
           onComplete: () => {
             // 使用BattleSystem对玩家造成伤害
             if (this.battleSystem) {
-              this.battleSystem.damagePlayer(enemy.damage || 10);
+              this.battleSystem.damagePlayer(enemy.damage);
             }
             
             // 更新UI
@@ -198,9 +199,9 @@ export class TurnManager {
       
       // 获取向玩家方向移动的有效位置
       const movePositions = this.enemyManager.getEnemyMovePositions(
-        enemy.position, 
+        enemy, 
         playerPosition,
-        enemyPositions
+        [...enemyPositions, playerPosition]
       );
       
       if (movePositions.length > 0) {
@@ -282,31 +283,9 @@ export class TurnManager {
         const index = entity.effects.indexOf(effect);
         if (index !== -1) {
           entity.effects.splice(index, 1);
-          console.log(`${entity.name} 的 ${this.getEffectName(effect.type)} 效果已过期`);
+          console.log(`${entity.name} 的 ${getEffectName(effect.type)} 效果已过期`);
         }
       }
-    }
-  }
-
-  // 获取效果名称
-  private getEffectName(effectType: CardEffectType): string {
-    switch (effectType) {
-      case CardEffectType.DAMAGE:
-        return '伤害';
-      case CardEffectType.HEAL:
-        return '治疗';
-      case CardEffectType.DEFENSE:
-        return '防御';
-      case CardEffectType.POISON:
-        return '毒素';
-      case CardEffectType.DRAW_CARD:
-        return '抽牌';
-      case CardEffectType.ENERGY_GAIN:
-        return '能量';
-      case CardEffectType.SHIELD:
-        return '护盾';
-      default:
-        return '未知效果';
     }
   }
 }

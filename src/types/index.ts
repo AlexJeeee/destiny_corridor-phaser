@@ -96,7 +96,10 @@ export enum CardEffectType {
   DEFENSE = 'defense',
   VULNERABLE = 'vulnerable',
   BOOST_ELEMENT = 'boost_element',
-  SHIELD = 'shield'
+  SHIELD = 'shield',
+  FLIP_ALL_CARDS = 'flip_all_cards',
+  SLOW = 'slow',
+  STUN = 'stun'
 }
 
 export enum Target {
@@ -133,9 +136,10 @@ export interface Character {
   position: GridCoord;
   effects: StatusEffect[];
   abilities: Ability[];
-  // 添加角色选择场景需要的属性
   avatarUrl?: string;
   description?: string;
+  moveRange: number;
+  attackRange: number;
 }
 
 // 敌人接口
@@ -150,6 +154,8 @@ export interface Enemy {
   effects: StatusEffect[];
   abilities: Ability[];
   imageUrl: string;
+  moveRange: number;
+  attackRange: number;
 }
 
 // 正方形坐标接口
@@ -185,6 +191,35 @@ export interface StatusEffect {
   target?: string; // 添加可选的 target 属性，用于指定效果的目标（如元素类型）
 }
 
+export enum AbilityEffectType {
+  DAMAGE = 'damage',
+  AOE_DAMAGE = 'aoe_damage',
+  SLOW = 'slow',
+  GAIN_ARMOR = 'gain_armor',
+  BOOST_DAMAGE = 'boost_damage',
+  BOOST_ELEMENT = 'boost_element',
+  CHANGE_TERRAIN = 'change_terrain',
+  STEALTH = 'stealth',
+  EXECUTE = 'execute',
+  WEAKEN = 'weaken',
+  BURN = 'burn',
+  STUN = 'stun',
+  FLIP_ALL_CARDS = 'flip_all_cards'
+}
+  
+
+export interface AbilityEffect {
+  type: AbilityEffectType;
+  value: number;
+  duration?: number;
+  target?: string;
+  condition?: {
+    selfHealth?: number;
+    targetHealth?: number;
+  };
+  range?: number | 'all';
+}
+
 // 能力接口
 export interface Ability {
   id: string;
@@ -193,7 +228,9 @@ export interface Ability {
   cooldown: number;
   currentCooldown: number;
   cost: number;
-  effects: CardEffect[];
+  // 是否主动技能
+  isPassive: boolean;
+  effects: AbilityEffect[];
 }
 
 // 神谕事件接口

@@ -117,10 +117,9 @@ export class EnemyManager {
     }
   }
 
-  getEnemyMovePositions(enemyPos: GridCoord, playerPos: GridCoord, occupiedPositions: GridCoord[]): GridCoord[] {
+  getEnemyMovePositions(enemy: Enemy, playerPos: GridCoord, occupiedPositions: GridCoord[]): GridCoord[] {
     // 获取敌人可移动的位置，优先选择接近玩家的位置
-    const moveRange = 1; // 敌人每回合移动1格
-    const possibleMoves = this.battlefieldManager.getValidMoves(enemyPos, moveRange, occupiedPositions);
+    const possibleMoves = this.battlefieldManager.getValidMoves(enemy.position, enemy.moveRange, occupiedPositions);
     
     // 按照到玩家的距离排序
     return possibleMoves.sort((a, b) => {
