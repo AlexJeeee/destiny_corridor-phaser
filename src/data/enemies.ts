@@ -19,9 +19,12 @@ export const initialEnemies: Enemy[] = [
         cooldown: 2,
         currentCooldown: 0,
         cost: 1,
-        isPassive: true,
+        isPassive: false,
         effects: [
           {
+            id: 'enemy_ability_fireball',
+            name: '火球术',
+            description: '发射一个小火球',
             type: AbilityEffectType.DAMAGE,
             value: 8,
             target: 'player'
@@ -50,14 +53,20 @@ export const initialEnemies: Enemy[] = [
         cooldown: 3,
         currentCooldown: 0,
         cost: 2,
-        isPassive: true,
+        isPassive: false,
         effects: [
           {
+            id: 'enemy_ability_frostnova',
+            name: '冰霜新星',
+            description: '释放冰霜新星，对周围敌人造成伤害并减速',
             type: AbilityEffectType.AOE_DAMAGE,
             value: 4,
             range: 1
           },
           {
+            id: 'enemy_ability_frostnova',
+            name: '冰霜新星',
+            description: '释放冰霜新星，对周围敌人造成伤害并减速',
             type: AbilityEffectType.SLOW,
             value: 1,
             duration: 1,
@@ -87,14 +96,20 @@ export const initialEnemies: Enemy[] = [
         cooldown: 2,
         currentCooldown: 0,
         cost: 2,
-        isPassive: true,
+        isPassive: false,
         effects: [
           {
+            id: 'enemy_ability_shadowstrike',
+            name: '暗影突袭',
+            description: '突袭玩家，造成伤害并使其虚弱',
             type: AbilityEffectType.DAMAGE,
             value: 8,
             target: 'player'
           },
           {
+            id: 'enemy_ability_weaken',
+            name: '暗影突袭',
+            description: '突袭玩家，造成伤害并使其虚弱',
             type: AbilityEffectType.WEAKEN,
             value: 1,
             duration: 1,
@@ -128,14 +143,20 @@ export const eliteEnemies: Enemy[] = [
         cooldown: 3,
         currentCooldown: 0,
         cost: 2,
-        isPassive: true,
+        isPassive: false,
         effects: [
           {
+            id: 'elite_ability_damage',
+            name: '烈焰风暴',
+            description: '释放烈焰风暴，对所有敌人造成伤害',
             type: AbilityEffectType.AOE_DAMAGE,
             value: 8,
             range: 'all'
           },
           {
+            id: 'elite_ability_burn',
+            name: '烈焰风暴',
+            description: '释放烈焰风暴，对所有敌人造成伤害',
             type: AbilityEffectType.BURN,
             value: 2,
             duration: 2,
@@ -165,14 +186,20 @@ export const eliteEnemies: Enemy[] = [
         cooldown: 4,
         currentCooldown: 0,
         cost: 2,
-        isPassive: true,
+        isPassive: false,
         effects: [
           {
+            id: 'elite_ability_damage',
+            name: '雷霆一击',
+            description: '对玩家造成大量伤害并使其眩晕',
             type: AbilityEffectType.DAMAGE,
             value: 15,
             target: 'player'
           },
           {
+            id: 'elite_ability_stun',
+            name: '雷霆一击',
+            description: '眩晕',
             type: AbilityEffectType.STUN,
             value: 1,
             duration: 1,
@@ -206,9 +233,12 @@ export const bossEnemies: Enemy[] = [
         cooldown: 3,
         currentCooldown: 0,
         cost: 2,
-        isPassive: true,
+        isPassive: false,
         effects: [
           {
+            id: 'boss_ability_flip_all_cards',
+            name: '命运扭曲',
+            description: '扭曲命运，随机改变所有卡牌的位置',
             type: AbilityEffectType.FLIP_ALL_CARDS,
             value: 1,
             target: 'all_cards'
@@ -222,9 +252,12 @@ export const bossEnemies: Enemy[] = [
         cooldown: 5,
         currentCooldown: 0,
         cost: 2,
-        isPassive: true,
+        isPassive: false,
         effects: [
           {
+            id: 'boss_ability_damage',
+            name: '毁灭打击',
+            description: '对玩家造成巨大伤害',
             type: AbilityEffectType.DAMAGE,
             value: 25,
             target: 'player'

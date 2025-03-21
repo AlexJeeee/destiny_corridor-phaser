@@ -35,7 +35,7 @@ export class GameBoardScene extends BaseScene {
     this.playerManager = new PlayerManager(this, this.battlefieldManager);
     this.enemyManager = new EnemyManager(this, this.battlefieldManager);
     this.cardManager = new CardManager(this);
-    this.uiManager = new UIManager(this);
+    this.uiManager = new UIManager(this, this.playerManager);
     this.turnManager = new TurnManager(
       this, 
       this.playerManager, 
@@ -95,6 +95,11 @@ export class GameBoardScene extends BaseScene {
     // 设置结束回合按钮回调
     this.uiManager.setOnEndTurnClicked(() => {
       this.turnManager.endPlayerTurn();
+    });
+    
+    // 设置技能使用回调
+    this.uiManager.setOnAbilityClicked((abilityId: string) => {
+      this.handleAbilityUsed(abilityId);
     });
     
     // 设置敌人回合结束回调
@@ -320,6 +325,25 @@ export class GameBoardScene extends BaseScene {
           this.battlefieldManager.clearValidMoves();
         }
       }
+    }
+  }
+
+  private handleAbilityUsed(abilityId: string): void {
+    // 检查当前是否为玩家回合
+    if (this.turnManager.getCurrentTurn() !== 'player' || !this.player) {
+      console.log('现在不是玩家回合，无法使用技能');
+      return;
+    }
+    
+    // 使用技能
+    const success = this.playerManager.useAbility(abilityId);
+    
+    if (success) {
+      // 更新UI
+      this.uiManager.updateInfoPanel(this.player);
+      
+      // 播放技能使用音效
+      // this.sound.play('ability-sound');
     }
   }
 

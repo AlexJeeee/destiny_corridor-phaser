@@ -1,5 +1,5 @@
 import Phaser from 'phaser';
-import { Character, GridCoord, Card, CardEffect, CardEffectType } from '@/types';
+import { Character, GridCoord, Card, CardEffect, CardEffectType, AbilityEffectType, AbilityEffect } from '@/types';
 import { BattlefieldManager } from './BattlefieldManager';
 import { getEffectName, getEffectDescription } from '@/utils';
 
@@ -8,6 +8,8 @@ export class PlayerManager {
   private battlefieldManager: BattlefieldManager;
   private player: Character | null = null;
   private playerSprite: Phaser.GameObjects.Container | null = null;
+  private onHealthChange: ((health: number, maxHealth: number) => void) | null = null;
+  private activePassiveAbilities: Set<string> = new Set();
 
   constructor(scene: Phaser.Scene, battlefieldManager: BattlefieldManager) {
     this.scene = scene;
@@ -16,6 +18,12 @@ export class PlayerManager {
 
   setPlayer(player: Character | null): void {
     this.player = player;
+    this.activePassiveAbilities.clear();
+    
+    // 初始检查被动技能
+    if (player) {
+      this.checkPassiveAbilities();
+    }
   }
 
   createPlayer(): void {
@@ -79,7 +87,7 @@ export class PlayerManager {
     }
   }
 
-  damagePlayer(damage: number): void {
+  takeDamage(damage: number): void {
     if (!this.player) return;
     
     // 检查玩家是否有防御效果
@@ -103,28 +111,40 @@ export class PlayerManager {
     // 对玩家造成伤害
     if (actualDamage > 0) {
       this.player.health = Math.max(0, this.player.health - actualDamage);
+      
+      // 检查被动技能
+      this.checkPassiveAbilities();
+      
+      // 触发血量变化回调
+      if (this.onHealthChange) {
+        this.onHealthChange(this.player.health, this.player.maxHealth);
+      }
       console.log(`玩家受到 ${actualDamage} 点伤害，剩余生命值: ${this.player.health}`);
     }
     
-    // 显示伤害数字
+    // 显示伤害文本
     if (this.playerSprite) {
-      const damageText = this.scene.add.text(this.playerSprite.x, this.playerSprite.y - 20, `-${actualDamage}`, {
+      const damageText = this.scene.add.text(0, -30, `-${damage}`, {
         fontFamily: 'Arial',
-        fontSize: '24px',
-        color: '#ff0000'
+        fontSize: '16px',
+        color: '#ff0000',
       }).setOrigin(0.5);
+      
+      this.playerSprite.add(damageText);
       
       this.scene.tweens.add({
         targets: damageText,
-        y: damageText.y - 40,
+        y: -60,
         alpha: 0,
         duration: 1000,
-        onComplete: () => damageText.destroy()
+        onComplete: () => {
+          damageText.destroy();
+        }
       });
     }
   }
 
-  healPlayer(amount: number): void {
+  heal(amount: number): void {
     if (!this.player) return;
     
     // 恢复生命值，但不超过最大生命值
@@ -132,71 +152,37 @@ export class PlayerManager {
     this.player.health = Math.min(this.player.maxHealth, this.player.health + amount);
     const actualHeal = this.player.health - oldHealth;
     
-    console.log(`玩家恢复了 ${actualHeal} 点生命值，当前生命值: ${this.player.health}`);
+    // 检查被动技能
+    this.checkPassiveAbilities();
     
-    // 显示治疗数字
+    // 触发血量变化回调
+    if (this.onHealthChange) {
+      this.onHealthChange(this.player.health, this.player.maxHealth);
+    }
+    
+    // 显示治疗文本
     if (this.playerSprite && actualHeal > 0) {
-      const healText = this.scene.add.text(this.playerSprite.x, this.playerSprite.y - 20, `+${actualHeal}`, {
+      const healText = this.scene.add.text(0, -30, `+${actualHeal}`, {
         fontFamily: 'Arial',
-        fontSize: '24px',
-        color: '#00ff00'
+        fontSize: '16px',
+        color: '#00ff00',
       }).setOrigin(0.5);
+      
+      this.playerSprite.add(healText);
       
       this.scene.tweens.add({
         targets: healText,
-        y: healText.y - 40,
+        y: -60,
         alpha: 0,
         duration: 1000,
-        onComplete: () => healText.destroy()
+        onComplete: () => {
+          healText.destroy();
+        }
       });
     }
   }
 
-  addDefenseToPlayer(amount: number, duration: number = 1): void {
-    if (!this.player) return;
-    
-    // 查找现有的防御效果
-    const existingDefense = this.player.effects.find(e => e.type === 'defense');
-    
-    if (existingDefense) {
-      // 增加现有防御效果的值
-      existingDefense.value += amount;
-      // 更新持续时间为较大的值
-      existingDefense.duration = Math.max(existingDefense.duration || 0, duration);
-      console.log(`增加玩家防御效果，当前防御值: ${existingDefense.value}，持续回合: ${existingDefense.duration}`);
-    } else {
-      // 添加新的防御效果
-      this.player.effects.push({
-        id: `defense-${Date.now()}`,
-        name: '防御',
-        description: '减少受到的伤害',
-        type: CardEffectType.DEFENSE,
-        value: amount,
-        duration: duration,
-        imageUrl: ''
-      });
-      console.log(`添加玩家防御效果，防御值: ${amount}，持续回合: ${duration}`);
-    }
-    
-    // 显示防御效果
-    if (this.playerSprite) {
-      const defenseText = this.scene.add.text(this.playerSprite.x, this.playerSprite.y - 20, `+${amount} 防御`, {
-        fontFamily: 'Arial',
-        fontSize: '18px',
-        color: '#4a9ae1'
-      }).setOrigin(0.5);
-      
-      this.scene.tweens.add({
-        targets: defenseText,
-        y: defenseText.y - 40,
-        alpha: 0,
-        duration: 1000,
-        onComplete: () => defenseText.destroy()
-      });
-    }
-  }
-
-  addEffectToPlayer(effect: CardEffect): void {
+  addEffectToPlayer(effect: CardEffect | AbilityEffect): void {
     if (!this.player) return;
     
     // 查找现有的同类效果
@@ -216,28 +202,36 @@ export class PlayerManager {
       
       console.log(`更新玩家效果 ${effect.type}，当前值: ${existingEffect.value}，持续回合: ${existingEffect.duration}`);
     } else {
-      // 添加新效果
-      this.player.effects.push({
-        id: `${effect.type}-${Date.now()}`,
-        name: getEffectName(effect.type),
-        description: getEffectDescription(effect.type),
-        type: effect.type,
-        value: effect.value || 0,
-        duration: effect.duration || 1,
-        imageUrl: '',
-        target: effect.target
-      });
+      // 将新效果添加到玩家效果列表
+      this.player.effects.push(effect);
       
-      console.log(`添加玩家效果 ${effect.type}，值: ${effect.value}，持续回合: ${effect.duration}`);
+      console.log(`添加玩家效果 ${effect.type}，值: ${effect.value || 0}，持续回合: ${effect.duration}`);
     }
     
     // 显示效果文本
     if (this.playerSprite) {
-      const effectText = this.scene.add.text(this.playerSprite.x, this.playerSprite.y - 20, `+${getEffectName(effect.type)}`, {
-        fontFamily: 'Arial',
-        fontSize: '18px',
-        color: '#ffcc00'
-      }).setOrigin(0.5);
+      let textColor = '#ffffff'; // 默认颜色
+      let effectName = getEffectName(effect.type);
+      
+      // 根据效果类型设置不同颜色
+      if (effect.type === CardEffectType.DEFENSE) {
+        textColor = '#4a9ae1'; // 防御效果为蓝色
+        effectName = '防御';
+      } else if (effect.type === CardEffectType.SHIELD) {
+        textColor = '#ffcc00'; // 护甲效果为黄色
+        effectName = '护甲';
+      }
+      
+      const effectText = this.scene.add.text(
+        this.playerSprite.x, 
+        this.playerSprite.y - 20, 
+        `+${effect.value || 0} ${effectName}`, 
+        {
+          fontFamily: 'Arial',
+          fontSize: '18px',
+          color: textColor
+        }
+      ).setOrigin(0.5);
       
       this.scene.tweens.add({
         targets: effectText,
@@ -252,11 +246,9 @@ export class PlayerManager {
   useCardOnSelf(card: Card): boolean {
     if (!this.player) return false;
     
-    console.log(`玩家对自己使用卡牌: ${card.name}`);
-    
-    // 检查能量是否足够
+    // 检查能量
     if (this.player.energy < card.cost) {
-      console.log('能量不足，无法使用卡牌');
+      console.log(`能量不足，无法使用卡牌 ${card.name}`);
       return false;
     }
     
@@ -264,12 +256,9 @@ export class PlayerManager {
     for (const effect of card.effects) {
       if (effect.type === CardEffectType.HEAL && effect.value) {
         // 治疗效果
-        this.healPlayer(effect.value);
-      } else if (effect.type === CardEffectType.DEFENSE && effect.value) {
-        // 防御效果
-        this.addDefenseToPlayer(effect.value, effect.duration);
+        this.heal(effect.value);
       } else {
-        // 其他效果
+        // 所有其他效果，包括防御效果
         this.addEffectToPlayer(effect);
       }
     }
@@ -277,6 +266,43 @@ export class PlayerManager {
     return true;
   }
 
+  useAbility(abilityId: string): boolean {
+    if (!this.player) return false;
+    
+    // 查找技能
+    const ability = this.player.abilities.find(a => a.id === abilityId);
+    if (!ability) {
+      console.log(`未找到技能 ID: ${abilityId}`);
+      return false;
+    }
+    
+    // 检查冷却
+    if (ability.currentCooldown > 0) {
+      console.log(`技能 ${ability.name} 正在冷却中，剩余回合: ${ability.currentCooldown}`);
+      return false;
+    }
+    
+    // 检查能量
+    if (this.player.energy < ability.cost) {
+      console.log(`能量不足，无法使用技能 ${ability.name}`);
+      return false;
+    }
+    
+    // 消耗能量
+    this.player.energy -= ability.cost;
+    
+    // 应用技能效果
+    for (const effect of ability.effects) {
+      this.addEffectToPlayer(effect);
+    }
+    
+    // 设置冷却
+    ability.currentCooldown = ability.cooldown;
+    
+    console.log(`使用技能 ${ability.name}`);
+    return true;
+  }
+  
   isPlayerDead(): boolean {
     return this.player ? this.player.health <= 0 : false;
   }
@@ -299,5 +325,67 @@ export class PlayerManager {
 
   getPlayerPosition(): GridCoord | null {
     return this.player ? this.player.position : null;
+  }
+
+  // 检查所有被动技能
+  checkPassiveAbilities(): void {
+    if (!this.player) return;
+    
+    // 获取当前血量百分比
+    const healthPercentage = this.player.health / this.player.maxHealth;
+    
+    // 检查每个被动技能
+    this.player.abilities.forEach(ability => {
+      if (ability.isPassive) {
+        let shouldActivate = true;
+        
+        // 检查每个效果的条件
+        for (const effect of ability.effects) {
+          // 检查血量条件
+          if (effect.condition?.selfHealth !== undefined) {
+            shouldActivate = healthPercentage <= effect.condition.selfHealth;
+          }
+          
+          // 可以在这里添加其他条件检查
+        }
+        
+        // 激活或停用被动技能
+        if (shouldActivate && !this.activePassiveAbilities.has(ability.id)) {
+          // 激活被动
+          this.activePassiveAbilities.add(ability.id);
+          console.log(`被动技能 ${ability.name} 已激活`);
+          
+          // 应用被动效果
+          for (const effect of ability.effects) {
+            this.addEffectToPlayer(effect);
+          }
+        } else if (!shouldActivate && this.activePassiveAbilities.has(ability.id)) {
+          // 停用被动
+          this.activePassiveAbilities.delete(ability.id);
+          console.log(`被动技能 ${ability.name} 已停用`);
+          
+          // 移除被动效果
+          this.removeEffectsByAbilityId(ability.id);
+        }
+      }
+    });
+  }
+  
+  // 根据技能ID移除效果
+  removeEffectsByAbilityId(abilityId: string): void {
+    if (!this.player) return;
+    
+    // 过滤掉指定技能ID的效果
+    this.player.effects = this.player.effects.filter(effect => effect.id !== abilityId);
+  }
+  
+  // 设置血量变化监听器
+  setHealthChangeListener(callback: (health: number, maxHealth: number) => void): void {
+    this.onHealthChange = callback;
+  }
+  
+  // 获取当前激活的被动技能
+  getActivePassiveAbilities(): Set<string> {
+    return this.activePassiveAbilities;
   }
 }

@@ -1,6 +1,6 @@
-import { CardEffectType } from '@/types';
+import { CardEffectType, AbilityEffectType } from '@/types';
 
-export const getEffectName = (effectType: CardEffectType): string => {
+export const getEffectName = (effectType: CardEffectType | AbilityEffectType): string => {
   switch (effectType) {
     case CardEffectType.DAMAGE:
       return '伤害';
@@ -28,7 +28,7 @@ export const getEffectName = (effectType: CardEffectType): string => {
 }
 
 // 获取效果描述
-export const getEffectDescription = (effectType: CardEffectType): string => {
+export const getEffectDescription = (effectType: CardEffectType | AbilityEffectType): string => {
   switch (effectType) {
     case CardEffectType.DAMAGE:
       return '造成伤害';

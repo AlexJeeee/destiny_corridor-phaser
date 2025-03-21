@@ -23,10 +23,13 @@ export const initialPlayerCharacter: Character = {
       cooldown: 1,
       currentCooldown: 0,
       cost: 1,
-      isPassive: true,
+      isPassive: false,
       effects: [
         {
-          type: AbilityEffectType.GAIN_ARMOR,
+          id: 'ability_1',
+          name: '叠甲',
+          description: '获得2点护甲',
+          type: AbilityEffectType.SHIELD,
           value: 2
         }
       ]
@@ -38,9 +41,12 @@ export const initialPlayerCharacter: Character = {
       cooldown: 0,
       currentCooldown: 0,
       cost: 0,
-      isPassive: false,
+      isPassive: true,
       effects: [
         {
+          id: 'ability_2',
+          name: '血怒',
+          description: '生命值低于30%时，伤害+50%',
           type: AbilityEffectType.BOOST_DAMAGE,
           value: 0.5,
           condition: {
@@ -77,9 +83,12 @@ export const unlockableCharacters: Character[] = [
         cooldown: 3,
         currentCooldown: 0,
         cost: 2,
-        isPassive: true,
+        isPassive: false,
         effects: [
           {
+            id: 'fire_ability_1',
+            name: '火焰之心',
+            description: '所有火系卡牌伤害+20%，持续2回合',
             type: AbilityEffectType.BOOST_ELEMENT,
             value: 0.2,
             duration: 2,
@@ -94,9 +103,12 @@ export const unlockableCharacters: Character[] = [
         cooldown: 4,
         currentCooldown: 0,
         cost: 3,
-        isPassive: true,
+        isPassive: false,
         effects: [
           {
+            id: 'fire_ability_2',
+            name: '燃烧大地',
+            description: '将周围2格范围内的地形变为火焰地形',
             type: AbilityEffectType.CHANGE_TERRAIN,
             value: 2,
             target: 'fire'
@@ -128,9 +140,12 @@ export const unlockableCharacters: Character[] = [
         cooldown: 4,
         currentCooldown: 0,
         cost: 2,
-        isPassive: true,
+        isPassive: false,
         effects: [
           {
+            id: 'shadow_ability_1',
+            name: '暗影潜行',
+            description: '获得2回合的隐身效果，敌人无法以你为目标',
             type: AbilityEffectType.STEALTH,
             value: 1,
             duration: 2
@@ -144,9 +159,12 @@ export const unlockableCharacters: Character[] = [
         cooldown: 3,
         currentCooldown: 0,
         cost: 0,
-        isPassive: false,
+        isPassive: true,
         effects: [
           {
+            id: 'shadow_ability_2',
+            name: '致命一击',
+            description: '对生命值低于30%的敌人造成双倍伤害',
             type: AbilityEffectType.EXECUTE,
             value: 2,
             condition: {

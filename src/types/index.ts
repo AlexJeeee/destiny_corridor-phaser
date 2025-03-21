@@ -113,13 +113,24 @@ export enum Target {
   MULTI = 'multi'
 }
 
-// 卡牌效果接口
-export interface CardEffect {
-  type: CardEffectType;
+export interface Effect {
+  id: string;
+  name: string;
+  description: string;
   value: number;
   duration?: number;
   target?: string;
-  condition?: string;
+  condition?: {
+    selfHealth?: number;
+    targetHealth?: number;
+  };
+  range?: number | 'all';
+  imageUrl?: string;
+}
+
+// 卡牌效果接口
+export interface CardEffect extends Effect {
+  type: CardEffectType;
 }
 
 // 角色接口
@@ -134,7 +145,7 @@ export interface Character {
   hand: Card[];
   discard: Card[];
   position: GridCoord;
-  effects: StatusEffect[];
+  effects: (CardEffect | AbilityEffect)[];
   abilities: Ability[];
   avatarUrl?: string;
   description?: string;
@@ -151,7 +162,7 @@ export interface Enemy {
   intent: string;
   damage: number;
   position: GridCoord;
-  effects: StatusEffect[];
+  effects: (CardEffect | AbilityEffect)[];
   abilities: Ability[];
   imageUrl: string;
   moveRange: number;
@@ -195,7 +206,7 @@ export enum AbilityEffectType {
   DAMAGE = 'damage',
   AOE_DAMAGE = 'aoe_damage',
   SLOW = 'slow',
-  GAIN_ARMOR = 'gain_armor',
+  SHIELD = 'shield',
   BOOST_DAMAGE = 'boost_damage',
   BOOST_ELEMENT = 'boost_element',
   CHANGE_TERRAIN = 'change_terrain',
@@ -208,16 +219,8 @@ export enum AbilityEffectType {
 }
   
 
-export interface AbilityEffect {
+export interface AbilityEffect extends Effect {
   type: AbilityEffectType;
-  value: number;
-  duration?: number;
-  target?: string;
-  condition?: {
-    selfHealth?: number;
-    targetHealth?: number;
-  };
-  range?: number | 'all';
 }
 
 // 能力接口
@@ -228,8 +231,8 @@ export interface Ability {
   cooldown: number;
   currentCooldown: number;
   cost: number;
-  // 是否主动技能
-  isPassive: boolean;
+  // 是否被动技能
+  isPassive: boolean; // true为被动
   effects: AbilityEffect[];
 }
 

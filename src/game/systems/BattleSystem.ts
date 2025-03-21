@@ -116,7 +116,7 @@ export class BattleSystem {
 
   // 对玩家造成伤害
   damagePlayer(damage: number): void {
-    this.playerManager.damagePlayer(damage);
+    this.playerManager.takeDamage(damage);
   }
 
   // 应用毒素效果到敌人
