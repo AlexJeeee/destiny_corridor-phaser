@@ -194,9 +194,10 @@ export class UIManager {
         wordWrap: { width: 150 }
       });
       
+      let cooldownText: Phaser.GameObjects.Text | null = null;
       // 添加冷却显示（仅对主动技能）
       if (!ability.isPassive) {
-        const cooldownText = this.scene.add.text(0, 0, 
+        cooldownText = this.scene.add.text(0, 0, 
           ability.currentCooldown > 0 ? `${ability.currentCooldown}` : '', {
           fontFamily: 'Arial',
           fontSize: '12px',
@@ -218,7 +219,7 @@ export class UIManager {
       }
       
       // 将所有元素添加到容器
-      abilityContainer.add([iconBg, iconText, nameText, descText]);
+      abilityContainer.add(cooldownText ? [iconBg, iconText, nameText, descText, cooldownText] : [iconBg, iconText, nameText, descText]);
       if (this.abilitiesPanel) {
         this.abilitiesPanel.add(abilityContainer);
       }

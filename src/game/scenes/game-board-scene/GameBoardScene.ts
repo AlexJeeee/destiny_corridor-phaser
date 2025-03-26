@@ -26,6 +26,9 @@ export class GameBoardScene extends BaseScene {
   private uiManager: UIManager;
   private turnManager: TurnManager;
   private battleSystem: BattleSystem | null = null;
+  
+  // 音频
+  private battleMusic: Phaser.Sound.BaseSound | null = null;
 
   constructor() {
     super('GameBoardScene');
@@ -66,6 +69,9 @@ export class GameBoardScene extends BaseScene {
     this.load.image('card-back', 'assets/images/card-back.png');
     this.load.image('card-frame', 'assets/images/card-frame.png');
     this.load.image('button', 'assets/images/button.png');
+    
+    // 加载战斗音乐
+    this.load.audio('battle-music', 'src/assets/audios/battle.mp3');
   }
 
   create(): void {
@@ -77,6 +83,13 @@ export class GameBoardScene extends BaseScene {
 
     // 设置相机
     this.cameras.main.setBounds(0, 0, this.game.config.width as number, this.game.config.height as number);
+    
+    // 播放战斗音乐
+    this.battleMusic = this.sound.add('battle-music', {
+      volume: 0.4,
+      loop: true
+    });
+    this.battleMusic.play();
     
     // 开始玩家回合
     this.turnManager.startPlayerTurn();
@@ -381,5 +394,15 @@ export class GameBoardScene extends BaseScene {
     
     // 清除UI
     this.uiManager.clearUI();
+  }
+
+  transitionTo(key: string, data?: any): void {
+    // 停止战斗音乐
+    if (this.battleMusic) {
+      this.battleMusic.stop();
+    }
+    
+    // 调用父类的场景切换方法
+    super.transitionTo(key, data);
   }
 }

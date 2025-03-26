@@ -22,6 +22,8 @@ export const getEffectName = (effectType: CardEffectType | AbilityEffectType): s
       return '易伤';
     case CardEffectType.WEAKEN:
       return '虚弱';
+    case AbilityEffectType.BOOST_DAMAGE:
+      return '伤害提升';
     default:
       return '未知效果';
   }
@@ -50,6 +52,8 @@ export const getEffectDescription = (effectType: CardEffectType | AbilityEffectT
       return '受到的伤害增加';
     case CardEffectType.WEAKEN:
       return '造成的伤害减少';
+    case AbilityEffectType.BOOST_DAMAGE:
+      return '增加造成的伤害';
     default:
       return '未知效果';
   }

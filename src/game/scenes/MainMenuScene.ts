@@ -2,6 +2,8 @@ import Phaser from 'phaser';
 import { BaseScene } from './BaseScene';
 
 export class MainMenuScene extends BaseScene {
+  private bgMusic: Phaser.Sound.BaseSound | null = null;
+
   constructor() {
     super('MainMenuScene');
   }
@@ -11,10 +13,20 @@ export class MainMenuScene extends BaseScene {
     this.load.image('menu-bg', 'assets/images/menu-background.png');
     this.load.image('logo', 'assets/images/logo.png');
     this.load.image('button', 'assets/images/button.png');
+    
+    // 加载背景音乐
+    this.load.audio('main-menu-music', 'src/assets/audios/main-menu.mp3');
   }
 
   create(): void {
     super.create();
+
+    // 播放背景音乐（循环播放）
+    this.bgMusic = this.sound.add('main-menu-music', {
+      volume: 0.5,
+      loop: true
+    });
+    this.bgMusic.play();
 
     // 添加背景
     const bg = this.add.image(this.cameras.main.width / 2, this.cameras.main.height / 2, 'menu-bg');
@@ -73,6 +85,16 @@ export class MainMenuScene extends BaseScene {
       fontSize: '14px',
       color: '#888888',
     }).setOrigin(0.5);
+  }
+
+  transitionTo(scene: string, data?: any): void {
+    // 停止背景音乐
+    if (this.bgMusic) {
+      this.bgMusic.stop();
+    }
+    
+    // 切换场景
+    super.transitionTo(scene, data);
   }
 
   private createMenuButton(x: number, y: number, text: string, callback: () => void): void {

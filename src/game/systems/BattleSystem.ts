@@ -1,4 +1,4 @@
-import { Character, Enemy, Card, CardType, CardEffect, CardEffectType } from '@/types';
+import { Character, Enemy, Card, CardType, CardEffect, CardEffectType, AbilityEffectType } from '@/types';
 import { PlayerManager, EnemyManager, CardManager, TurnManager } from '@/game/scenes/game-board-scene/components';
 import { getEffectName, getEffectDescription } from '@/utils';
 
@@ -74,6 +74,10 @@ export class BattleSystem {
     // 检查敌人是否有防御效果
     const blockEffect = enemy.effects.find(e => e.type === CardEffectType.DEFENSE || e.type === CardEffectType.SHIELD);
     let actualDamage = damage;
+
+    if (this.player.effects.find(e => e.type === AbilityEffectType.BOOST_DAMAGE)) {
+      actualDamage *= (1 + (this.player.effects.find(e => e.type === AbilityEffectType.BOOST_DAMAGE)?.value || 0));
+    }
 
     if (blockEffect) {
       if (blockEffect.value >= actualDamage) {
