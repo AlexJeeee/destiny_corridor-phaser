@@ -44,7 +44,7 @@ export const initialDeck: Card[] = [
       {
         id: 'card_fireball_area',
         name: '火球术',
-        description: '向目标发射一个火球',
+        description: '向目标周围1格范围内的敌人造成2点火焰伤害',
         type: CardEffectType.AOE_DAMAGE,
         value: 2,
         target: Target.AREA
@@ -80,7 +80,7 @@ export const initialDeck: Card[] = [
         type: CardEffectType.FREEZE,
         value: 1,
         duration: 1,
-        target: 'single'
+        target: Target.SINGLE_ENEMY
       }
     ],
     imageUrl: '/assets/cards/ice_spike.png',

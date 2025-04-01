@@ -41,6 +41,9 @@ export class EnemyManager {
           const enemyImage = this.scene.add.sprite(0, 0, 'enemy');
           enemySprite = this.scene.add.container(gridCell.pixelX, gridCell.pixelY);
           enemySprite.add(enemyImage);
+          
+          // 为图片敌人添加血条
+          this.addHealthBar(enemySprite, enemy);
         } else {
           // 如果没有加载到敌人图像，则使用容器包含圆形和文本
           enemySprite = this.scene.add.container(gridCell.pixelX, gridCell.pixelY);
@@ -52,13 +55,6 @@ export class EnemyManager {
           const nameText = this.scene.add.text(0, -this.battlefieldManager.getTileSize() / 3, enemy.name, {
             fontFamily: 'Arial',
             fontSize: '12px',
-            color: '#ffffff',
-          }).setOrigin(0.5);
-          
-          // 添加敌人生命值
-          const healthText = this.scene.add.text(0, -this.battlefieldManager.getTileSize() / 6, `HP: ${enemy.health}/${enemy.maxHealth}`, {
-            fontFamily: 'Arial',
-            fontSize: '10px',
             color: '#ffffff',
           }).setOrigin(0.5);
           
@@ -77,7 +73,10 @@ export class EnemyManager {
           }).setOrigin(0.5);
           
           // 将圆形和文本添加到容器
-          enemySprite.add([circle, nameText, healthText, intentText, damageText]);
+          enemySprite.add([circle, nameText, intentText, damageText]);
+          
+          // 添加血条
+          this.addHealthBar(enemySprite, enemy);
         }
         
         // 保存敌人精灵引用
@@ -98,20 +97,44 @@ export class EnemyManager {
     const enemySprite = this.enemySprites.get(enemy.id);
     if (!enemySprite || enemySprite.type !== 'Container') return;
     
-    // 更新生命值文本
-    const healthText = enemySprite.getAt(2) as Phaser.GameObjects.Text;
+    // 查找血条容器（最后一个元素）
+    const healthBarContainer = enemySprite.list[enemySprite.list.length - 1] as Phaser.GameObjects.Container;
+    if (!healthBarContainer) return;
+    
+    // 更新血量文本
+    const healthText = healthBarContainer.getByName('healthText') as Phaser.GameObjects.Text;
     if (healthText) {
-      healthText.setText(`HP: ${enemy.health}/${enemy.maxHealth}`);
+      healthText.setText(`${enemy.health}/${enemy.maxHealth}`);
+    }
+    
+    // 更新血条
+    const healthBar = healthBarContainer.getByName('healthBar') as Phaser.GameObjects.Rectangle;
+    if (healthBar) {
+      // 计算血量百分比
+      const healthPercent = enemy.health / enemy.maxHealth;
+      const healthBarWidth = this.battlefieldManager.getTileSize() * 0.8;
+      
+      // 更新血条宽度
+      healthBar.width = healthBarWidth * healthPercent;
+      
+      // 更新血条颜色
+      healthBar.setFillStyle(this.getHealthBarColor(healthPercent));
     }
     
     // 更新意图文本
-    const intentText = enemySprite.getAt(3) as Phaser.GameObjects.Text;
+    let intentText;
+    if (enemySprite.list.length >= 3) {
+      intentText = enemySprite.list[2] as Phaser.GameObjects.Text;
+    }
     if (intentText) {
       intentText.setText(`意图: ${this.getIntentText(enemy.intent)}`);
     }
     
     // 更新伤害文本
-    const damageText = enemySprite.getAt(4) as Phaser.GameObjects.Text;
+    let damageText;
+    if (enemySprite.list.length >= 4) {
+      damageText = enemySprite.list[3] as Phaser.GameObjects.Text;
+    }
     if (damageText) {
       damageText.setText(`伤害: ${enemy.damage}`);
     }
@@ -253,5 +276,57 @@ export class EnemyManager {
 
   areAllEnemiesDead(): boolean {
     return this.enemies.length === 0;
+  }
+
+  private getHealthBarColor(healthPercent: number): number {
+    if (healthPercent <= 0.3) {
+      return 0xff0000; // 红色（低血量）
+    } else if (healthPercent <= 0.6) {
+      return 0xffaa00; // 橙色（中等血量）
+    } else {
+      return 0x00ff00; // 绿色（高血量）
+    }
+  }
+
+  // 添加血条到敌人头上
+  private addHealthBar(enemySprite: Phaser.GameObjects.Container, enemy: Enemy): void {
+    const tileSize = this.battlefieldManager.getTileSize();
+    
+    // 创建血条容器，放在敌人头上
+    const healthBarContainer = this.scene.add.container(0, -tileSize * 0.7);
+    
+    // 计算血条宽度
+    const healthBarWidth = tileSize * 0.8;
+    const healthPercent = enemy.health / enemy.maxHealth;
+    
+    // 添加血条背景
+    const healthBarBg = this.scene.add.rectangle(0, 0, healthBarWidth, 10, 0x333333)
+      .setOrigin(0.5, 0.5)
+      .setName('healthBarBg');
+    
+    // 添加血条
+    const healthBarColor = this.getHealthBarColor(healthPercent);
+    const healthBar = this.scene.add.rectangle(
+      -healthBarWidth / 2, 
+      0, 
+      healthBarWidth * healthPercent, 
+      10, 
+      healthBarColor
+    )
+      .setOrigin(0, 0.5)
+      .setName('healthBar');
+    
+    // 添加血量文本
+    const healthText = this.scene.add.text(0, 0, `${enemy.health}/${enemy.maxHealth}`, {
+      fontFamily: 'Arial',
+      fontSize: '10px',
+      color: '#ffffff',
+    }).setOrigin(0.5, 0.5).setName('healthText');
+    
+    // 将所有元素添加到血条容器
+    healthBarContainer.add([healthBarBg, healthBar, healthText]);
+    
+    // 将血条容器添加到敌人精灵
+    enemySprite.add(healthBarContainer);
   }
 }

@@ -83,12 +83,12 @@ export class UIManager {
       color: '#ffffff',
     });
     
-    // 创建生命值信息
-    const healthInfo = this.scene.add.text(-100, -50, `生命: ${player?.health || 0}/${player?.maxHealth || 0}`, {
+    // 创建生命值文本
+    const healthText = this.scene.add.text(-100, -50, `生命: ${player?.health || 0}/${player?.maxHealth || 0}`, {
       fontFamily: 'Arial',
       fontSize: '14px',
       color: '#4ae15a',
-    });
+    }).setName('healthText');
     
     // 创建能量信息
     const energyInfo = this.scene.add.text(-100, -20, `能量: ${player?.energy || 0}/${player?.maxEnergy || 0}`, {
@@ -105,7 +105,7 @@ export class UIManager {
     });
     
     // 将元素添加到容器
-    this.infoPanel.add([panelBg, playerInfo, healthInfo, energyInfo, floorInfo]);
+    this.infoPanel.add([panelBg, playerInfo, healthText, energyInfo, floorInfo]);
     
     // 创建技能面板
     if (player) {
@@ -344,11 +344,11 @@ export class UIManager {
     if (!this.infoPanel || !player) return;
     
     // 更新玩家信息
-    const healthInfo = this.infoPanel.getAt(2) as Phaser.GameObjects.Text;
+    const healthText = this.infoPanel.getByName('healthText') as Phaser.GameObjects.Text;
     const energyInfo = this.infoPanel.getAt(3) as Phaser.GameObjects.Text;
     
-    if (healthInfo && energyInfo) {
-      healthInfo.setText(`生命: ${player.health}/${player.maxHealth}`);
+    if (healthText && energyInfo) {
+      healthText.setText(`生命: ${player.health}/${player.maxHealth}`);
       energyInfo.setText(`能量: ${player.energy}/${player.maxEnergy}`);
     }
     
@@ -468,25 +468,6 @@ export class UIManager {
     const healthText = this.infoPanel.getByName('healthText') as Phaser.GameObjects.Text;
     if (healthText) {
       healthText.setText(`生命: ${health}/${maxHealth}`);
-    }
-    
-    // 计算血量百分比
-    const healthPercent = health / maxHealth;
-    
-    // 查找血条
-    const healthBar = this.infoPanel.getByName('healthBar') as Phaser.GameObjects.Rectangle;
-    if (healthBar) {
-      // 更新血条宽度
-      healthBar.width = 150 * healthPercent;
-      
-      // 根据血量百分比更改颜色
-      if (healthPercent <= 0.3) {
-        healthBar.setFillStyle(0xff0000); // 红色（低血量）
-      } else if (healthPercent <= 0.6) {
-        healthBar.setFillStyle(0xffaa00); // 橙色（中等血量）
-      } else {
-        healthBar.setFillStyle(0x00ff00); // 绿色（高血量）
-      }
     }
   }
 }

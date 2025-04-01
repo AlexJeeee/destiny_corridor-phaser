@@ -42,6 +42,9 @@ export class PlayerManager {
         const playerContainer = this.scene.add.container(gridCell.pixelX, gridCell.pixelY);
         playerContainer.add(playerSprite);
         this.playerSprite = playerContainer;
+        
+        // 添加血条
+        this.addHealthBar(playerContainer);
       } else {
         // 如果没有加载到玩家图像，则使用容器包含圆形和文本
         const playerContainer = this.scene.add.container(gridCell.pixelX, gridCell.pixelY);
@@ -61,6 +64,9 @@ export class PlayerManager {
         
         // 保存玩家容器引用
         this.playerSprite = playerContainer;
+        
+        // 添加血条
+        this.addHealthBar(playerContainer);
       }
     }
   }
@@ -120,6 +126,9 @@ export class PlayerManager {
         this.onHealthChange(this.player.health, this.player.maxHealth);
       }
       console.log(`玩家受到 ${actualDamage} 点伤害，剩余生命值: ${this.player.health}`);
+      
+      // 更新血条
+      this.updateHealthBar();
     }
     
     // 显示伤害文本
@@ -159,6 +168,9 @@ export class PlayerManager {
     if (this.onHealthChange) {
       this.onHealthChange(this.player.health, this.player.maxHealth);
     }
+    
+    // 更新血条
+    this.updateHealthBar();
     
     // 显示治疗文本
     if (this.playerSprite && actualHeal > 0) {
@@ -379,9 +391,105 @@ export class PlayerManager {
     this.player.effects = this.player.effects.filter(effect => effect.id !== abilityId);
   }
   
+  // 添加血条到玩家头上
+  private addHealthBar(playerContainer: Phaser.GameObjects.Container): void {
+    if (!this.player) return;
+    
+    const tileSize = this.battlefieldManager.getTileSize();
+    
+    // 创建血条容器，放在玩家头上
+    const healthBarContainer = this.scene.add.container(0, -tileSize * 0.7);
+    
+    // 计算血条宽度
+    const healthBarWidth = tileSize * 0.8;
+    const healthPercent = this.player.health / this.player.maxHealth;
+    
+    // 添加血条背景
+    const healthBarBg = this.scene.add.rectangle(0, 0, healthBarWidth, 10, 0x333333)
+      .setOrigin(0.5, 0.5)
+      .setName('healthBarBg');
+    
+    // 添加血条
+    const healthBarColor = this.getHealthBarColor(healthPercent);
+    const healthBar = this.scene.add.rectangle(
+      -healthBarWidth / 2, 
+      0, 
+      healthBarWidth * healthPercent, 
+      10, 
+      healthBarColor
+    )
+      .setOrigin(0, 0.5)
+      .setName('healthBar');
+    
+    // 添加血量文本
+    const healthText = this.scene.add.text(0, 0, `${this.player.health}/${this.player.maxHealth}`, {
+      fontFamily: 'Arial',
+      fontSize: '10px',
+      color: '#ffffff',
+    }).setOrigin(0.5, 0.5).setName('healthText');
+    
+    // 将所有元素添加到血条容器
+    healthBarContainer.add([healthBarBg, healthBar, healthText]);
+    
+    // 将血条容器添加到玩家精灵
+    playerContainer.add(healthBarContainer);
+  }
+  
+  // 根据血量百分比获取血条颜色
+  private getHealthBarColor(healthPercent: number): number {
+    if (healthPercent <= 0.3) {
+      return 0xff0000; // 红色（低血量）
+    } else if (healthPercent <= 0.6) {
+      return 0xffaa00; // 橙色（中等血量）
+    } else {
+      return 0x00ff00; // 绿色（高血量）
+    }
+  }
+  
+  // 更新血条显示
+  private updateHealthBar(): void {
+    if (!this.player || !this.playerSprite) return;
+    
+    // 查找血条容器（最后一个元素）
+    const healthBarContainer = this.playerSprite.list[this.playerSprite.list.length - 1] as Phaser.GameObjects.Container;
+    if (!healthBarContainer) return;
+    
+    // 更新血量文本
+    const healthText = healthBarContainer.getByName('healthText') as Phaser.GameObjects.Text;
+    if (healthText) {
+      healthText.setText(`${this.player.health}/${this.player.maxHealth}`);
+    }
+    
+    // 更新血条
+    const healthBar = healthBarContainer.getByName('healthBar') as Phaser.GameObjects.Rectangle;
+    if (healthBar) {
+      // 计算血量百分比
+      const healthPercent = this.player.health / this.player.maxHealth;
+      const healthBarWidth = this.battlefieldManager.getTileSize() * 0.8;
+      
+      // 更新血条宽度
+      healthBar.width = healthBarWidth * healthPercent;
+      
+      // 更新血条颜色
+      healthBar.setFillStyle(this.getHealthBarColor(healthPercent));
+    }
+  }
+  
   // 设置血量变化监听器
   setHealthChangeListener(callback: (health: number, maxHealth: number) => void): void {
     this.onHealthChange = callback;
+    
+    // 添加血条更新逻辑
+    const originalCallback = callback;
+    this.onHealthChange = (health: number, maxHealth: number) => {
+      // 调用原始回调
+      if (originalCallback) {
+        originalCallback(health, maxHealth);
+      }
+      
+      // 更新血条
+      this.updateHealthBar();
+    };
   }
   
   // 获取当前激活的被动技能
