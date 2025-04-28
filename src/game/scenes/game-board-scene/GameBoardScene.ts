@@ -62,13 +62,13 @@ export class GameBoardScene extends BaseScene {
 
   preload(): void {
     // 加载游戏资源
-    this.load.image('grid-tile', 'assets/images/grid-tile.png');
-    this.load.image('grid-highlight', 'assets/images/grid-highlight.png');
-    this.load.image('player', 'assets/images/player.png');
-    this.load.image('enemy', 'assets/images/enemy.png');
-    this.load.image('card-back', 'assets/images/card-back.png');
-    this.load.image('card-frame', 'assets/images/card-frame.png');
-    this.load.image('button', 'assets/images/button.png');
+    this.load.image('grid-tile', 'src/assets/images/grid-tile.png');
+    this.load.image('grid-highlight', 'src/assets/images/grid-highlight.png');
+    this.load.image('player', 'src/assets/images/characters/player.png');
+    this.load.image('enemy', 'src/assets/images/enemy.png');
+    this.load.image('card-back', 'src/assets/images/card-back.png');
+    this.load.image('card-frame', 'src/assets/images/card-frame.png');
+    this.load.image('button', 'src/assets/images/button.png');
     
     // 加载战斗音乐
     this.load.audio('battle-music', 'src/assets/audios/battle.mp3');
@@ -371,6 +371,9 @@ export class GameBoardScene extends BaseScene {
     
     // 清除当前战场
     this.clearGameElements();
+    
+    // 清除战斗系统
+    this.battleSystem = null;
     
     // 创建新的战场
     this.createGameElements();

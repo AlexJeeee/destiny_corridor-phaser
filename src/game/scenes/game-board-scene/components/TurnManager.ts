@@ -70,9 +70,10 @@ export class TurnManager {
     // 更新UI
     this.uiManager.updateInfoPanel(player);
     
-    // 抽取卡牌
+    // 抽取卡牌 - 第一回合不抽牌，因为已经在初始化时抽了5张
     if (this.turnCount > 1) {
-      this.cardManager.drawCards(player, 1);
+      // 抽取5张卡牌，每回合都有新的手牌
+      this.cardManager.drawCards(player, 5);
     }
     
     // 减少技能冷却时间
@@ -86,6 +87,13 @@ export class TurnManager {
   }
 
   endPlayerTurn(): void {
+    // 获取玩家
+    const player = this.playerManager.getPlayer();
+    if (!player) return;
+    
+    // 弃置所有手牌
+    this.cardManager.discardHand();
+    
     // 清除卡牌选中状态
     this.cardManager.clearCardSelection();
     

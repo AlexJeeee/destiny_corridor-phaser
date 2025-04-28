@@ -37,13 +37,18 @@ export class EnemyManager {
       if (gridCell) {
         // 创建敌人精灵
         let enemySprite: Phaser.GameObjects.Container;
+        
         if (this.scene.textures.exists('enemy')) {
-          const enemyImage = this.scene.add.sprite(0, 0, 'enemy');
+          // 使用敌人图片创建
           enemySprite = this.scene.add.container(gridCell.pixelX, gridCell.pixelY);
-          enemySprite.add(enemyImage);
           
-          // 为图片敌人添加血条
-          this.addHealthBar(enemySprite, enemy);
+          const enemyImage = this.scene.add.sprite(0, 0, 'enemy');
+          // 设置敌人图片的缩放比例，使其适应格子大小
+          const tileSize = this.battlefieldManager.getTileSize();
+          const scale = tileSize / Math.max(enemyImage.width, enemyImage.height) * 0.8; // 缩放到格子大小的80%
+          enemyImage.setScale(scale);
+          
+          enemySprite.add(enemyImage);
         } else {
           // 如果没有加载到敌人图像，则使用容器包含圆形和文本
           enemySprite = this.scene.add.container(gridCell.pixelX, gridCell.pixelY);
@@ -74,10 +79,10 @@ export class EnemyManager {
           
           // 将圆形和文本添加到容器
           enemySprite.add([circle, nameText, intentText, damageText]);
-          
-          // 添加血条
-          this.addHealthBar(enemySprite, enemy);
         }
+        
+        // 添加血条
+        this.addHealthBar(enemySprite, enemy);
         
         // 保存敌人精灵引用
         this.enemySprites.set(enemy.id, enemySprite);

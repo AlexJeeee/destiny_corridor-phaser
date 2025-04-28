@@ -39,6 +39,11 @@ export class PlayerManager {
       // 创建玩家精灵
       if (this.scene.textures.exists('player')) {
         const playerSprite = this.scene.add.sprite(0, 0, 'player');
+        // 设置玩家图片的缩放比例，使其适应格子大小
+        const tileSize = this.battlefieldManager.getTileSize();
+        const scale = tileSize / Math.max(playerSprite.width, playerSprite.height) * 0.8; // 缩放到格子大小的80%
+        playerSprite.setScale(scale);
+        
         const playerContainer = this.scene.add.container(gridCell.pixelX, gridCell.pixelY);
         playerContainer.add(playerSprite);
         this.playerSprite = playerContainer;

@@ -3,10 +3,12 @@ import { Card, Character, CardType, CardEffectType } from '@/types';
 
 export class CardManager {
   private scene: Phaser.Scene;
-  private playerCards: Card[] = [];
+  private playerCards: Card[] = []; // 玩家手牌
   private cardSprites: Phaser.GameObjects.Container[] = [];
   private selectedCard: Card | null = null;
   private onCardSelected: ((card: Card) => void) | null = null;
+  private drawPile: Card[] = []; // 抽牌堆
+  private discardPile: Card[] = []; // 弃牌堆
 
   constructor(scene: Phaser.Scene) {
     this.scene = scene;
@@ -23,8 +25,18 @@ export class CardManager {
       return;
     }
     
-    // 模拟玩家手牌
-    this.playerCards = player.deck.slice(0, 5) || [];
+    // 初始化抽牌堆和弃牌堆
+    // 每次调用createCards时都重新初始化卡牌系统，确保不会累积卡牌
+    this.playerCards = [];
+    this.drawPile = [...player.deck];
+    this.shuffleDrawPile();
+    
+    // 初始抽5张牌作为起始手牌
+    for (let i = 0; i < 5; i++) {
+      if (this.drawPile.length > 0) {
+        this.playerCards.push(this.drawPile.pop()!);
+      }
+    }
     
     // 清空之前的卡牌精灵
     this.cardSprites.forEach(sprite => sprite.destroy());
@@ -182,6 +194,9 @@ export class CardManager {
       // 保存卡牌容器引用
       this.cardSprites.push(cardContainer);
     });
+    
+    // 显示抽牌堆和弃牌堆数量
+    this.updateDeckCounters();
   }
 
   handleCardClick(card: Card, index: number): void {
@@ -222,7 +237,10 @@ export class CardManager {
     // 从手牌中移除卡牌
     const cardIndex = this.playerCards.findIndex(c => c.id === card.id);
     if (cardIndex !== -1) {
-      this.playerCards.splice(cardIndex, 1);
+      const playedCard = this.playerCards.splice(cardIndex, 1)[0];
+      
+      // 将使用过的卡牌放入弃牌堆
+      this.discardPile.push(playedCard);
       
       // 移除卡牌精灵
       if (this.cardSprites[cardIndex]) {
@@ -232,6 +250,9 @@ export class CardManager {
       
       // 重新排列剩余卡牌
       this.rearrangeCards();
+      
+      // 更新抽牌堆和弃牌堆计数器
+      this.updateDeckCounters();
     }
   }
 
@@ -267,15 +288,34 @@ export class CardManager {
 
   drawCards(player: Character, count: number): void {
     // 如果玩家卡组为空，则不抽牌
-    if (!player || !player.deck || player.deck.length === 0) return;
+    if (!player) return;
     
     // 抽取指定数量的卡牌
     for (let i = 0; i < count; i++) {
-      if (this.playerCards.length < 5 && player.deck.length > 0) {
-        // 从卡组中随机抽取一张卡牌
-        const randomIndex = Math.floor(Math.random() * player.deck.length);
-        const card = player.deck[randomIndex];
+      // 检查手牌是否已满
+      if (this.playerCards.length >= 10) {
+        console.log('手牌已满，无法抽取更多卡牌');
+        break;
+      }
+      
+      // 检查抽牌堆是否为空
+      if (this.drawPile.length === 0) {
+        // 如果弃牌堆也为空，则无法抽牌
+        if (this.discardPile.length === 0) {
+          console.log('抽牌堆和弃牌堆均为空，无法抽取更多卡牌');
+          break;
+        }
         
+        // 将弃牌堆洗牌后放入抽牌堆
+        console.log('抽牌堆已空，重新洗牌');
+        this.drawPile = [...this.discardPile];
+        this.discardPile = [];
+        this.shuffleDrawPile();
+      }
+      
+      // 从抽牌堆顶部抽一张牌
+      const card = this.drawPile.pop();
+      if (card) {
         // 添加到手牌
         this.playerCards.push(card);
       }
@@ -290,7 +330,94 @@ export class CardManager {
     this.cardSprites.forEach(sprite => sprite.destroy());
     this.cardSprites = [];
     this.playerCards = [];
+    this.drawPile = [];
+    this.discardPile = [];
     this.selectedCard = null;
+    // 不要清除回调函数，否则会导致卡牌选择功能失效
+    // this.onCardSelected = null;
+    
+    // 清除抽牌堆和弃牌堆计数器
+    this.clearDeckCounters();
+  }
+  
+  // 洗牌函数
+  private shuffleDrawPile(): void {
+    // Fisher-Yates 洗牌算法
+    for (let i = this.drawPile.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [this.drawPile[i], this.drawPile[j]] = [this.drawPile[j], this.drawPile[i]];
+    }
+  }
+  
+  // 创建抽牌堆和弃牌堆计数器
+  private updateDeckCounters(): void {
+    // 清除现有计数器
+    this.clearDeckCounters();
+    
+    // 创建抽牌堆计数器
+    const drawPileCounter = this.scene.add.text(
+      this.scene.cameras.main.width - 50, 
+      this.scene.cameras.main.height - 50,
+      `抽牌堆: ${this.drawPile.length}`,
+      {
+        fontFamily: 'Arial',
+        fontSize: '12px',
+        color: '#ffffff',
+        backgroundColor: '#333333',
+        padding: { x: 5, y: 3 }
+      }
+    ).setOrigin(1, 1).setName('drawPileCounter');
+    
+    // 创建弃牌堆计数器
+    const discardPileCounter = this.scene.add.text(
+      50, 
+      this.scene.cameras.main.height - 50,
+      `弃牌堆: ${this.discardPile.length}`,
+      {
+        fontFamily: 'Arial',
+        fontSize: '12px',
+        color: '#ffffff',
+        backgroundColor: '#333333',
+        padding: { x: 5, y: 3 }
+      }
+    ).setOrigin(0, 1).setName('discardPileCounter');
+  }
+  
+  // 清除抽牌堆和弃牌堆计数器
+  private clearDeckCounters(): void {
+    const drawPileCounter = this.scene.children.getByName('drawPileCounter');
+    if (drawPileCounter) {
+      drawPileCounter.destroy();
+    }
+    
+    const discardPileCounter = this.scene.children.getByName('discardPileCounter');
+    if (discardPileCounter) {
+      discardPileCounter.destroy();
+    }
+  }
+  
+  // 弃置所有手牌
+  discardHand(): void {
+    // 将所有手牌移至弃牌堆
+    this.discardPile.push(...this.playerCards);
+    this.playerCards = [];
+    
+    // 清除卡牌精灵
+    this.cardSprites.forEach(sprite => sprite.destroy());
+    this.cardSprites = [];
+    
+    // 更新计数器
+    this.updateDeckCounters();
+  }
+  
+  // 获取抽牌堆
+  getDrawPile(): Card[] {
+    return this.drawPile;
+  }
+  
+  // 获取弃牌堆
+  getDiscardPile(): Card[] {
+    return this.discardPile;
   }
 
   getSelectedCard(): Card | null {
