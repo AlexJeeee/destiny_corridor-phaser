@@ -73,7 +73,7 @@ export class CardManager {
           .setStrokeStyle(2, 0xffffff);
           
         // 为矩形添加自定义的 setTint 和 clearTint 方法
-        (cardBackground as any).setTint = function(tint) {
+        (cardBackground as any).setTint = function(tint: number) {
           this.setFillStyle(tint);
           return this;
         };
@@ -262,7 +262,6 @@ export class CardManager {
     const cardSpacing = 20;
     const totalWidth = (cardWidth + cardSpacing) * this.playerCards.length - cardSpacing;
     const startX = (this.scene.cameras.main.width - totalWidth) / 2;
-    const cardAreaY = this.scene.cameras.main.height - 100;
     
     this.cardSprites.forEach((sprite, index) => {
       const x = startX + index * (cardWidth + cardSpacing) + cardWidth / 2;
